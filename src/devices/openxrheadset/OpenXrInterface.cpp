@@ -532,10 +532,18 @@ bool OpenXrInterface::prepareXrSession()
     if (!configs || num == 0)
     {
         yCError(OPENXRHEADSET, "Failed to get valid GLXFBConfigs!");
+        return false;
     }
 
     GLXFBConfig fbconfig = configs[0];
     XFree(configs);
+
+    int visualid = 0;
+    if (glXGetFBConfigAttrib(dpy, fbconfig, GLX_VISUAL_ID, &visualid) != 0)
+    {
+        yCError(OPENXRHEADSET, "Failed to get valid visual ID!");
+        return false;
+    }
 
     m_pimpl->graphics_binding_gl.type = XR_TYPE_GRAPHICS_BINDING_OPENGL_XLIB_KHR;
     m_pimpl->graphics_binding_gl.next = nullptr;
@@ -543,6 +551,7 @@ bool OpenXrInterface::prepareXrSession()
     m_pimpl->graphics_binding_gl.glxContext = ctx;
     m_pimpl->graphics_binding_gl.glxDrawable = draw;
     m_pimpl->graphics_binding_gl.glxFBConfig = fbconfig;
+    m_pimpl->graphics_binding_gl.visualid = visualid;
 
 #endif
 
