@@ -61,7 +61,7 @@ jobs:
         sudo apt install wget unzip ninja-build curl patch python3 pkg-config libx11-dev glslang-tools libglvnd-dev ca-certificates libusb-1.0-0-dev libudev-dev libhidapi-dev libwayland-dev libuvc-dev libavcodec-dev libopencv-dev libv4l-dev libcjson-dev libsdl2-dev libegl1-mesa-dev
 
         # Dependencies to have a dummy screen
-        sudo apt install xserver-xorg-video-dummy vulkan-tools mesa-vulkan-drivers
+        sudo apt install xserver-xorg-video-dummy xserver-xorg-core xserver-xorg mesa-utils vulkan-tools mesa-vulkan-drivers
 
     - name: Start virtual X
       run: |
@@ -169,6 +169,7 @@ jobs:
         #lavapipe (software Vulkan) settings
         export LIBGL_ALWAYS_SOFTWARE=1
         export __GLX_VENDOR_LIBRARY_NAME=mesa
+        export MESA_LOADER_DRIVER_OVERRIDE=llvmpipe
         export VK_ICD_FILENAMES=/usr/share/vulkan/icd.d/lvp_icd.i686.json:/usr/share/vulkan/icd.d/lvp_icd.x86_64.json
 
         #Monado settings
