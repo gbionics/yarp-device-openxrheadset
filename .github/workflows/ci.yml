@@ -12,7 +12,6 @@ env:
   YCM_TAG: v0.18.2
   YARP_TAG: v3.10.0
   OPENXR_TAG: main
-  MONADO_TAG: main
 
 jobs:
   build:
@@ -56,19 +55,7 @@ jobs:
 
         # yarp-device-openxrheadset dependencies
         sudo apt install libeigen3-dev libglm-dev libglfw3-dev libglew-dev
-
-        # Monado additional dependencies (just for testing)
-        sudo apt install wget unzip ninja-build curl patch python3 pkg-config libx11-dev glslang-tools libglvnd-dev ca-certificates libusb-1.0-0-dev libudev-dev libhidapi-dev libwayland-dev libuvc-dev libavcodec-dev libopencv-dev libv4l-dev libcjson-dev libsdl2-dev libegl1-mesa-dev
-
-        #Xvfb, just to have a dummy screen
-        sudo apt install xvfb vulkan-tools mesa-vulkan-drivers
-
-    - name: Vulkan extensions
-      shell: bash -l {0}
-      run: |
-        LIBGL_ALWAYS_SOFTWARE=1 __GLX_VENDOR_LIBRARY_NAME=mesa VK_ICD_FILENAMES=/usr/share/vulkan/icd.d/lvp_icd.i686.json:/usr/share/vulkan/icd.d/lvp_icd.x86_64.json vulkaninfo
-
-
+        
     - name: Source-based OpenXR installation
       shell: bash -l {0}
       run: |
@@ -77,15 +64,6 @@ jobs:
         cd OpenXR-SDK && mkdir -p build && cd build
         cmake -DCMAKE_INSTALL_PREFIX=${GITHUB_WORKSPACE}/install -DCMAKE_BUILD_TYPE=Release ..
         make install
-
-    - name: Source-based monado installation
-      shell: bash -l {0}
-      run: |
-        cd ${GITHUB_WORKSPACE}
-        git clone https://gitlab.freedesktop.org/monado/monado.git --depth 1 --branch ${MONADO_TAG}
-        cd monado && mkdir -p build && cd build
-        cmake -G Ninja -DCMAKE_INSTALL_PREFIX=${GITHUB_WORKSPACE}/install -DCMAKE_BUILD_TYPE=Release -DXRT_FEATURE_SERVICE:BOOL=OFF -DXRT_OPENXR_INSTALL_ACTIVE_RUNTIME=OFF -DXRT_MODULE_IPC:BOOL=OFF ..
-        ninja install
 
     - name: Source-based YARP installation
       shell: bash -l {0}
@@ -141,12 +119,7 @@ jobs:
         #lavapipe (software Vulkan) settings
         export LIBGL_ALWAYS_SOFTWARE=1
         export __GLX_VENDOR_LIBRARY_NAME=mesa
-        export VK_ICD_FILENAMES=/usr/share/vulkan/icd.d/lvp_icd.i686.json:/usr/share/vulkan/icd.d/lvp_icd.x86_64.json
 
-        #Monado settings
-        export XRT_COMPOSITOR_FORCE_XCB=1
-        export XR_RUNTIME_JSON=${GITHUB_WORKSPACE}/install/share/openxr/1/openxr_monado.json
+        export XR_RUNTIME_JSON=${GITHUB_WORKSPACE}/install/share/openxr/1/openxr_dummy.json
 
-        #Run ctest on a virtual X server environment (xvfb-run)
-        xvfb-run ctest --output-on-failure -C ${{ matrix.build_type }} .
-
+        ctest --output-on-failure -C ${{ matrix.build_type }} .
