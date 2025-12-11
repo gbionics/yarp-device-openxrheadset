@@ -63,18 +63,34 @@ jobs:
         # Dependencies to have a dummy screen
         sudo apt install xserver-xorg-video-dummy xserver-xorg-core xserver-xorg mesa-utils vulkan-tools mesa-vulkan-drivers
 
-    - name: Start virtual X
+    # ====== Start a GLX-capable headless X server (dummy) with explicit auth ======
+    - name: Start headless Xorg (dummy) with XAUTH
+      id: xorg
       run: |
-        cat > dummy.conf <<EOF
+        set -e
+
+        # Use DISPLAY :99 consistently
+        echo "DISPLAY=:99" >> $GITHUB_ENV
+
+        # Create an Xorg dummy config
+        cat > dummy.conf <<'EOF'
+        Section "Monitor"
+            Identifier "Monitor0"
+            HorizSync 28.0-80.0
+            VertRefresh 48.0-75.0
+        EndSection
+
         Section "Device"
-            Identifier "Dummy"
+            Identifier "DummyDevice"
             Driver "dummy"
             VideoRam 256000
+            Option "ConstantDPI" "true"
         EndSection
 
         Section "Screen"
             Identifier "Screen0"
-            Device "Dummy"
+            Device "DummyDevice"
+            Monitor "Monitor0"
             DefaultDepth 24
             SubSection "Display"
                 Depth 24
@@ -83,13 +99,43 @@ jobs:
         EndSection
         EOF
 
-        nohup Xorg -config dummy.conf :99 -noreset -nolisten tcp +extension GLX +extension RANDR +extension RENDER >/tmp/xorg.log 2>&1 &
+        # Prepare Xauthority
+        XAUTH="$HOME/.Xauthority-99"
+        COOKIE=$(hexdump -n 16 -v -e '/1 "%02x"' /dev/urandom)
+        xauth -f "$XAUTH" add :99 . "$COOKIE"
+        echo "XAUTHORITY=$XAUTH" >> $GITHUB_ENV
+
+        # Start Xorg as root, binding to :99 and using our auth file
+        # -noreset: keep server alive; -nolisten tcp: local only; extensions enabled explicitly
+        sudo Xorg :99 -config dummy.conf -noreset -nolisten tcp \
+              +extension GLX +extension RANDR +extension RENDER \
+              -logfile /tmp/Xorg.99.log -auth "$XAUTH" >/tmp/xorg-run.log 2>&1 &
+
         # Wait for the server to accept connections
-        for i in $(seq 1 15); do xdpyinfo -display :99 >/dev/null 2>&1 && break || sleep 1; done
+        for i in $(seq 1 20); do
+          if DISPLAY=:99 XAUTHORITY="$XAUTH" xdpyinfo >/dev/null 2>&1; then
+            echo "Xorg is up"
+            break
+          fi
+          sleep 0.5
+        done
+
+        # One last check; if it fails, show logs and exit non-zero
+        if ! DISPLAY=:99 XAUTHORITY="$XAUTH" xdpyinfo >/dev/null 2>&1; then
+          echo "Failed to start Xorg on :99"
+          echo "===== /tmp/Xorg.99.log ====="
+          sudo tail -n +1 -n 300 /tmp/Xorg.99.log || true
+          echo "===== /tmp/xorg-run.log ====="
+          tail -n 300 /tmp/xorg-run.log || true
+          exit 1
+        fi
+
         echo "----- Xorg log (tail) -----"
-        tail -n 80 /tmp/xorg.log || true
-      env:
-        DISPLAY: :99
+        sudo tail -n 100 /tmp/Xorg.99.log || true
+
+    - name: Sanity check GLX
+      run: |
+        glxinfo | grep -E "OpenGL vendor|OpenGL renderer|OpenGL version" || (echo "GLX missing" && exit 1)
 
     - name: Vulkan extensions
       shell: bash -l {0}
@@ -159,8 +205,18 @@ jobs:
 
     - name: Test
       shell: bash -l {0}
+      env:
+        # From earlier step
+        DISPLAY: ${{ env.DISPLAY }}
+        XAUTHORITY: ${{ env.XAUTHORITY }}
+        # Software GL/Vulkan
+        LIBGL_ALWAYS_SOFTWARE: "1"
+        MESA_LOADER_DRIVER_OVERRIDE: llvmpipe
+        __GLX_VENDOR_LIBRARY_NAME: mesa
+        VK_ICD_FILENAMES: /usr/share/vulkan/icd.d/lvp_icd.i686.json:/usr/share/vulkan/icd.d/lvp_icd.x86_64.json
+        # Do NOT set XR_RUNTIME_JSON (no runtime in CI)
       run: |
-        export PATH=$PATH:${GITHUB_WORKSPACE}/install/bin
+        export PATH="${GITHUB_WORKSPACE}/install/bin:$PATH"
         export DISPLAY=:99
 
         yarpserver --write &
