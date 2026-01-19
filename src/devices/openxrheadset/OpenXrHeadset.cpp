@@ -192,11 +192,11 @@ bool yarp::dev::OpenXrHeadset::open(yarp::os::Searchable &cfg)
                 std::transform(groupName.begin(), groupName.end(), groupName.begin(), ::tolower);
                 std::string portName = m_prefix + "/" + labelGroup.check("port_id", yarp::os::Value(groupName)).toString();
 
-                if (!label.options.parseFromConfigurationFile(portName, labelGroup))
-                {
-                    yCError(OPENXRHEADSET) << "Failed to parse" << groupName;
-                    return false;
-                }
+                //if (!label.options.parseFromConfigurationFile(portName, labelGroup))
+                //{
+                //    yCError(OPENXRHEADSET) << "Failed to parse" << groupName;
+                //    return false;
+                //}
             }
         }
 
@@ -405,62 +405,62 @@ bool yarp::dev::OpenXrHeadset::threadInit()
             return false;
         }
 
-        auto getLayer = [this]() -> std::shared_ptr<IOpenXrQuadLayer>
-        {
-            if (m_useNativeQuadLayers)
-            {
-                return m_openXrInterface.addHeadFixedQuadLayer();
-            }
-            else
-            {
-                return m_openXrInterface.addHeadFixedOpenGLQuadLayer();
-            }
-        };
+        //auto getLayer = [this]() -> std::shared_ptr<IOpenXrQuadLayer>
+        //{
+        //    if (m_useNativeQuadLayers)
+        //    {
+        //        return m_openXrInterface.addHeadFixedQuadLayer();
+        //    }
+        //    else
+        //    {
+        //        return m_openXrInterface.addHeadFixedOpenGLQuadLayer();
+        //    }
+        //};
 
-        m_eyesManager.options().leftEyeQuadLayer = getLayer();
-        m_eyesManager.options().rightEyeQuadLayer = getLayer();
+        //m_eyesManager.options().leftEyeQuadLayer = getLayer();
+        //m_eyesManager.options().rightEyeQuadLayer = getLayer();
 
-        if (!m_eyesManager.initialize())
-        {
-            yCError(OPENXRHEADSET) << "Failed to initialize eyes.";
-        }
+        //if (!m_eyesManager.initialize())
+        //{
+        //    yCError(OPENXRHEADSET) << "Failed to initialize eyes.";
+        //}
 
-        for (GuiParam& gui : m_huds)
-        {
-            if (!gui.layer.initialize(getLayer(), gui.portName)) {
-                yCError(OPENXRHEADSET) << "Cannot initialize" << gui.portName << "display texture.";
-                return false;
-            }
-            gui.layer.setVisibility(gui.visibility);
-            gui.layer.setDimensions(gui.width, gui.height);
-            gui.layer.setPosition({ gui.x, gui.y, gui.z });
-        }
+        //for (GuiParam& gui : m_huds)
+        //{
+        //    if (!gui.layer.initialize(getLayer(), gui.portName)) {
+        //        yCError(OPENXRHEADSET) << "Cannot initialize" << gui.portName << "display texture.";
+        //        return false;
+        //    }
+        //    gui.layer.setVisibility(gui.visibility);
+        //    gui.layer.setDimensions(gui.width, gui.height);
+        //    gui.layer.setPosition({ gui.x, gui.y, gui.z });
+        //}
 
-        for (LabelLayer& label : m_labels)
-        {
-            label.options.quadLayer = getLayer();
+        //for (LabelLayer& label : m_labels)
+        //{
+        //    label.options.quadLayer = getLayer();
 
-            if (!label.layer.initialize(label.options)) {
-                yCError(OPENXRHEADSET) << "Cannot initialize" << label.options.portName << "label.";
-                return false;
-            }
-            label.layer.setVisibility(IOpenXrQuadLayer::Visibility::BOTH_EYES);
-            label.layer.setDimensions(label.width, label.height);
-            label.layer.setPosition({ label.x, label.y, label.z });
-        }
+        //    if (!label.layer.initialize(label.options)) {
+        //        yCError(OPENXRHEADSET) << "Cannot initialize" << label.options.portName << "label.";
+        //        return false;
+        //    }
+        //    label.layer.setVisibility(IOpenXrQuadLayer::Visibility::BOTH_EYES);
+        //    label.layer.setDimensions(label.width, label.height);
+        //    label.layer.setPosition({ label.x, label.y, label.z });
+        //}
 
-        for (SlideLayer& slide : m_slides)
-        {
-            slide.options.quadLayer = getLayer();
-            if (!slide.layer.initialize(slide.options)) {
-                yCError(OPENXRHEADSET) << "Cannot initialize" << slide.options.portName << "slide.";
-                return false;
-            }
-            slide.layer.setVisibility(IOpenXrQuadLayer::Visibility::BOTH_EYES);
-            slide.layer.setDimensions(slide.width, slide.height);
-            slide.layer.setPosition({ slide.x, slide.y, slide.z });
-            slide.layer.setImage(slide.options.initialSlide);
-        }
+        //for (SlideLayer& slide : m_slides)
+        //{
+        //    slide.options.quadLayer = getLayer();
+        //    if (!slide.layer.initialize(slide.options)) {
+        //        yCError(OPENXRHEADSET) << "Cannot initialize" << slide.options.portName << "slide.";
+        //        return false;
+        //    }
+        //    slide.layer.setVisibility(IOpenXrQuadLayer::Visibility::BOTH_EYES);
+        //    slide.layer.setDimensions(slide.width, slide.height);
+        //    slide.layer.setPosition({ slide.x, slide.y, slide.z });
+        //    slide.layer.setImage(slide.options.initialSlide);
+        //}
 
         this->yarp().attachAsServer(this->m_rpcPort);
         if (!m_rpcPort.open(m_rpcPortName))
@@ -493,10 +493,10 @@ void yarp::dev::OpenXrHeadset::threadRelease()
             hud.layer.close();
         }
 
-        for (auto& label : m_labels)
-        {
-            label.layer.close();
-        }
+        //for (auto& label : m_labels)
+        //{
+        //    label.layer.close();
+        //}
 
         for (auto& slide : m_slides)
         {
@@ -530,11 +530,11 @@ void yarp::dev::OpenXrHeadset::run()
 
     if (m_openXrInterface.isRunning())
     {
-        if (!m_eyesManager.update()) {
-            yCError(OPENXRHEADSET) << "Failed to update eyes.";
-        }
+        //if (!m_eyesManager.update()) {
+        //    yCError(OPENXRHEADSET) << "Failed to update eyes.";
+        //}
 
-        Eigen::Vector3f leftAngles = EulerAngles::XYZ(m_eyesManager.getLeftEyeDesiredRotation().matrix());
+        /*Eigen::Vector3f leftAngles = EulerAngles::XYZ(m_eyesManager.getLeftEyeDesiredRotation().matrix());
         Eigen::Vector3f rightAngles = EulerAngles::XYZ(m_eyesManager.getRightEyeDesiredRotation().matrix());
 
         double averageElevation = (leftAngles[0] + rightAngles[0]) / 2.0;
@@ -587,7 +587,7 @@ void yarp::dev::OpenXrHeadset::run()
             if (!slide.layer.updateTexture()) {
                 yCError(OPENXRHEADSET) << "Failed to update" << slide.options.portName << "slide.";
             }
-        }
+        }*/
         m_openXrInterface.draw();
 
         size_t previousButtonsSize = m_buttons.size();
@@ -996,7 +996,7 @@ bool yarp::dev::OpenXrHeadset::setLabelEnabled(const int32_t labelIndex, const b
         return false;
     }
 
-    m_labels[labelIndex].layer.setEnabled(enabled);
+    //m_labels[labelIndex].layer.setEnabled(enabled);
 
     return true;
 }

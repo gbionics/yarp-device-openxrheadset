@@ -23,7 +23,7 @@ set(yarp_openxrheadset_SRCS
   impl/OpenXrQuadLayer.cpp
   impl/OpenXrInterfaceImpl.cpp
   impl/OpenGLQuadLayer.cpp
-  LabelPortToQuadLayer.cpp
+  #LabelPortToQuadLayer.cpp
   SlideManager.cpp
   EulerAngles.cpp
 )
@@ -33,7 +33,7 @@ set(yarp_openxrheadset_HDRS
   OpenGLConfig.h
   OpenXrHeadsetLogComponent.h
   ImagePortToQuadLayer.h
-  LabelPortToQuadLayer.h
+  #LabelPortToQuadLayer.h
   OpenXrInterface.h
   OpenXrEigenConversions.h
   impl/OpenXrQuadLayer.h
@@ -123,11 +123,9 @@ target_link_libraries(yarp_openxrheadset
     YARP::YARP_dev
     YARP::YARP_math
     OpenXR::openxr_loader
-    glfw
-    GLEW::GLEW
+    openxr-gfxwrapper
     OpenGL::GL
     Eigen3::Eigen
-    GLFont::GLFont
     stb_image
     glm
 )
@@ -154,11 +152,9 @@ if(BUILD_TESTING)
         YARP::YARP_math
         YARP::YARP_init
         OpenXR::openxr_loader
-        glfw
-        GLEW::GLEW
+        openxr-gfxwrapper
         OpenGL::GL
         Eigen3::Eigen
-        GLFont::GLFont
         stb_image
         )
 

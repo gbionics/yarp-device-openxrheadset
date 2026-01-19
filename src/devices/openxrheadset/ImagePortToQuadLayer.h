@@ -86,11 +86,11 @@ public:
             return false;
         }
 
-        //This has to be called from the same thread where the window has been created
-        if (!glfwInit()) {
-            yCError(OPENXRHEADSET, "Unable to initialize GLFW");
-            return false;
-        }
+        ////This has to be called from the same thread where the window has been created
+        //if (!glfwInit()) {
+        //    yCError(OPENXRHEADSET, "Unable to initialize GLFW");
+        //    return false;
+        //}
 
         m_initThreadID = std::this_thread::get_id();
 

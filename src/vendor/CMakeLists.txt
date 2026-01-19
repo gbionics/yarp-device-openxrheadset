@@ -5,3 +5,6 @@
 # BSD-2-Clause license. See the accompanying LICENSE file for details.
 
 add_subdirectory(stb)
+add_subdirectory(glad2)
+add_subdirectory(gfxwrapper_opengl)
+

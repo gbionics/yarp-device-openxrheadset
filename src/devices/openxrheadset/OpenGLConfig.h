@@ -18,12 +18,13 @@
 #define GL_GLEXT_PROTOTYPES
 #define GL3_PROTOTYPES
 
-#include <GL/glew.h>
+#include <glad/gl.h>
 #include <GL/gl.h>
 
 #if defined(_WIN32)
- #define GLFW_EXPOSE_NATIVE_WIN32
- #define GLFW_EXPOSE_NATIVE_WGL
+ #include <glad/wgl.h>
+ //#define GLFW_EXPOSE_NATIVE_WIN32
+ //#define GLFW_EXPOSE_NATIVE_WGL
 #elif defined(__APPLE__)
  #define GLFW_EXPOSE_NATIVE_COCOA
  #define GLFW_EXPOSE_NATIVE_NSGL
@@ -34,8 +35,9 @@
  #include <GL/glx.h>
 #endif
 
-#include <GLFW/glfw3.h>
-#include <GLFW/glfw3native.h>
+//#include <GLFW/glfw3.h>
+//#include <GLFW/glfw3native.h>
+#include <gfxwrapper_opengl.h>
 
 #ifdef Success
   #undef Success

@@ -27,7 +27,7 @@
 #include <yarp/os/BufferedPort.h>
 #include <OpenXrInterface.h>
 #include <ImagePortToQuadLayer.h>
-#include <LabelPortToQuadLayer.h>
+//#include <LabelPortToQuadLayer.h>
 #include <EyesManager.h>
 #include <SlideManager.h>
 #include <PosesManager.h>
@@ -302,8 +302,8 @@ private:
         float         x;
         float         y;
         float         z;
-        LabelPortToQuadLayer::Options options;
-        LabelPortToQuadLayer layer;
+        //LabelPortToQuadLayer::Options options;
+        //LabelPortToQuadLayer layer;
     };
 
     struct SlideLayer

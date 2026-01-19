@@ -259,14 +259,16 @@ public:
     // Swapchain for what the eyes see in the 3D world
     std::vector<SwapChainData> projection_view_swapchains;
 
+    int swapchain_format;
+
     // Swapchain for the depth of what the eyes see in the 3D world
-    std::vector<SwapChainData> projection_view_depth_swapchains;
+    //std::vector<SwapChainData> projection_view_depth_swapchains;
 
     // containers for submitting swapchains with rendered VR frames
     std::vector<XrCompositionLayerProjectionView> projection_views;
 
     // containers for submitting swapchains with rendered VR depth frames
-    std::vector<XrCompositionLayerDepthInfoKHR> depth_projection_views;
+    // std::vector<XrCompositionLayerDepthInfoKHR> depth_projection_views;
 
     // array of views, filled by the runtime with current HMD display pose (basically the position of each eye)
     std::vector<XrView> views;
@@ -350,7 +352,7 @@ public:
 #endif
 
     // GLFW window to mirror what the user sees
-    GLFWwindow* window = nullptr;
+    ksGpuWindow window = {};
 
     // The window size
     std::vector<unsigned int> windowSize;
