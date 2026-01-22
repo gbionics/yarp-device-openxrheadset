@@ -155,7 +155,7 @@ bool OpenXrInterface::prepareXrInstance()
     // List the requested extensions to the runtime
     std::vector<const char*> requestedExtensions;
     requestedExtensions.push_back(XR_KHR_OPENGL_ENABLE_EXTENSION_NAME);
-    requestedExtensions.push_back(XR_KHR_COMPOSITION_LAYER_DEPTH_EXTENSION_NAME);
+    //requestedExtensions.push_back(XR_KHR_COMPOSITION_LAYER_DEPTH_EXTENSION_NAME);
     requestedExtensions.push_back(XR_EXT_DEBUG_UTILS_EXTENSION_NAME);
     if (m_pimpl->htc_trackers_supported)
     {
@@ -631,7 +631,36 @@ bool OpenXrInterface::prepareXrSwapchain()
 {
     m_pimpl->projection_view_swapchain_create_info.resize(m_pimpl->viewconfig_views.size());
     m_pimpl->projection_view_swapchains.resize(m_pimpl->viewconfig_views.size());
-    m_pimpl->projection_view_depth_swapchains.resize(m_pimpl->viewconfig_views.size());
+    //m_pimpl->projection_view_depth_swapchains.resize(m_pimpl->viewconfig_views.size());
+
+    uint32_t swapchainFormatCount;
+    XrResult result = xrEnumerateSwapchainFormats(m_pimpl->session, 0, &swapchainFormatCount, nullptr);
+    if (!m_pimpl->checkXrOutput(result, "Failed to create view space!"))
+        return false;
+    std::vector<int64_t> runtimeSupportedTypes(swapchainFormatCount);
+    result = xrEnumerateSwapchainFormats(m_pimpl->session, (uint32_t)runtimeSupportedTypes.size(), &swapchainFormatCount,
+        runtimeSupportedTypes.data());
+
+    auto usableFormats = {
+                GL_RGB10_A2,
+                GL_RGBA16,
+                GL_RGBA16F,
+                GL_RGBA32F,
+                // The two below should only be used as a fallback, as they are linear color formats without enough bits for color
+                // depth, thus leading to banding.
+                GL_RGBA8,
+                GL_RGBA8_SNORM,
+    };
+
+    auto it = std::find_first_of(
+        runtimeSupportedTypes.begin(), runtimeSupportedTypes.end(), usableFormats.begin(), usableFormats.end(),
+        [](int64_t supportedFormat, auto usableFormat) { return static_cast<int64_t>(usableFormat) == supportedFormat; });
+    if (it == runtimeSupportedTypes.end()) {
+        yCError(OPENXRHEADSET) << "No suitable swapchain format found.";
+        return false;
+    }
+
+    m_pimpl->swapchain_format = *it;
 
     for (size_t i = 0; i < m_pimpl->projection_view_swapchain_create_info.size(); ++i)
     {
@@ -641,7 +670,7 @@ bool OpenXrInterface::prepareXrSwapchain()
             .next = NULL,
             .createFlags = 0,
             .usageFlags = XR_SWAPCHAIN_USAGE_COLOR_ATTACHMENT_BIT | XR_SWAPCHAIN_USAGE_TRANSFER_DST_BIT,
-            .format = GL_SRGB8_ALPHA8,
+            .format = m_pimpl->swapchain_format,
             .sampleCount = m_pimpl->viewconfig_views[i].recommendedSwapchainSampleCount,
             .width = m_pimpl->viewconfig_views[i].recommendedImageRectWidth,
             .height = m_pimpl->viewconfig_views[i].recommendedImageRectHeight,
@@ -673,35 +702,35 @@ bool OpenXrInterface::prepareXrSwapchain()
 
         //We create an additional swapchain for the depth
 
-        XrSwapchainCreateInfo depth_swapchain_create_info = {
-            .type = XR_TYPE_SWAPCHAIN_CREATE_INFO,
-            .next = NULL,
-            .createFlags = 0,
-            .usageFlags = XR_SWAPCHAIN_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
-            .format = GL_DEPTH_COMPONENT16,
-            .sampleCount = m_pimpl->projection_view_swapchain_create_info[i].sampleCount,
-            .width = m_pimpl->projection_view_swapchain_create_info[i].width,
-            .height = m_pimpl->projection_view_swapchain_create_info[i].height,
-            .faceCount = 1,
-            .arraySize = 1,
-            .mipCount = 1,
-        };
+        //XrSwapchainCreateInfo depth_swapchain_create_info = {
+        //    .type = XR_TYPE_SWAPCHAIN_CREATE_INFO,
+        //    .next = NULL,
+        //    .createFlags = 0,
+        //    .usageFlags = XR_SWAPCHAIN_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
+        //    .format = GL_DEPTH_COMPONENT16,
+        //    .sampleCount = m_pimpl->projection_view_swapchain_create_info[i].sampleCount,
+        //    .width = m_pimpl->projection_view_swapchain_create_info[i].width,
+        //    .height = m_pimpl->projection_view_swapchain_create_info[i].height,
+        //    .faceCount = 1,
+        //    .arraySize = 1,
+        //    .mipCount = 1,
+        //};
 
-        result = xrCreateSwapchain(m_pimpl->session, &depth_swapchain_create_info, &(m_pimpl->projection_view_depth_swapchains[i].swapchain));
-        if (!m_pimpl->checkXrOutput(result, "Failed to create depth swapchain"))
-            return false;
+        //result = xrCreateSwapchain(m_pimpl->session, &depth_swapchain_create_info, &(m_pimpl->projection_view_depth_swapchains[i].swapchain));
+        //if (!m_pimpl->checkXrOutput(result, "Failed to create depth swapchain"))
+        //    return false;
 
-        uint32_t depth_swapchain_images_count = 0;
-        result = xrEnumerateSwapchainImages(m_pimpl->projection_view_depth_swapchains[i].swapchain, 0, &depth_swapchain_images_count, NULL);
-        if (!m_pimpl->checkXrOutput(result, "Failed to enumerate depth swapchain images"))
-            return false;
+        //uint32_t depth_swapchain_images_count = 0;
+        //result = xrEnumerateSwapchainImages(m_pimpl->projection_view_depth_swapchains[i].swapchain, 0, &depth_swapchain_images_count, NULL);
+        //if (!m_pimpl->checkXrOutput(result, "Failed to enumerate depth swapchain images"))
+        //    return false;
 
-        m_pimpl->projection_view_depth_swapchains[i].swapchain_images.resize(depth_swapchain_images_count, dummy);
+        //m_pimpl->projection_view_depth_swapchains[i].swapchain_images.resize(depth_swapchain_images_count, dummy);
 
-        result = xrEnumerateSwapchainImages(m_pimpl->projection_view_depth_swapchains[i].swapchain, depth_swapchain_images_count, &depth_swapchain_images_count,
-                                            (XrSwapchainImageBaseHeader*)(m_pimpl->projection_view_depth_swapchains[i].swapchain_images.data()));
-        if (!m_pimpl->checkXrOutput(result, "Failed to enumerate depth swapchain images"))
-            return false;
+        //result = xrEnumerateSwapchainImages(m_pimpl->projection_view_depth_swapchains[i].swapchain, depth_swapchain_images_count, &depth_swapchain_images_count,
+        //                                    (XrSwapchainImageBaseHeader*)(m_pimpl->projection_view_depth_swapchains[i].swapchain_images.data()));
+        //if (!m_pimpl->checkXrOutput(result, "Failed to enumerate depth swapchain images"))
+        //    return false;
     }
 
 
@@ -727,27 +756,27 @@ bool OpenXrInterface::prepareXrCompositionLayers()
         // projection_views[i].{pose, fov} have to be filled every frame in frame loop
     };
 
-    m_pimpl->depth_projection_views.resize(m_pimpl->viewconfig_views.size());
-    for (size_t i = 0; i < m_pimpl->depth_projection_views.size(); i++) {
-        m_pimpl->depth_projection_views[i].type = XR_TYPE_COMPOSITION_LAYER_DEPTH_INFO_KHR;
-        m_pimpl->depth_projection_views[i].next = NULL;
-        m_pimpl->depth_projection_views[i].minDepth = 0.f;
-        m_pimpl->depth_projection_views[i].maxDepth = 1.f;
-        m_pimpl->depth_projection_views[i].nearZ = m_pimpl->nearZ;
-        m_pimpl->depth_projection_views[i].farZ = m_pimpl->farZ;
+    //m_pimpl->depth_projection_views.resize(m_pimpl->viewconfig_views.size());
+    //for (size_t i = 0; i < m_pimpl->depth_projection_views.size(); i++) {
+    //    m_pimpl->depth_projection_views[i].type = XR_TYPE_COMPOSITION_LAYER_DEPTH_INFO_KHR;
+    //    m_pimpl->depth_projection_views[i].next = NULL;
+    //    m_pimpl->depth_projection_views[i].minDepth = 0.f;
+    //    m_pimpl->depth_projection_views[i].maxDepth = 1.f;
+    //    m_pimpl->depth_projection_views[i].nearZ = m_pimpl->nearZ;
+    //    m_pimpl->depth_projection_views[i].farZ = m_pimpl->farZ;
 
-        m_pimpl->depth_projection_views[i].subImage.swapchain = m_pimpl->projection_view_depth_swapchains[i].swapchain;
-        m_pimpl->depth_projection_views[i].subImage.imageArrayIndex = 0;
-        m_pimpl->depth_projection_views[i].subImage.imageRect.offset.x = 0;
-        m_pimpl->depth_projection_views[i].subImage.imageRect.offset.y = 0;
-        m_pimpl->depth_projection_views[i].subImage.imageRect.extent.width =
-            m_pimpl->projection_views[i].subImage.imageRect.extent.width;
-        m_pimpl->depth_projection_views[i].subImage.imageRect.extent.height =
-            m_pimpl->projection_views[i].subImage.imageRect.extent.height;
+    //    m_pimpl->depth_projection_views[i].subImage.swapchain = m_pimpl->projection_view_depth_swapchains[i].swapchain;
+    //    m_pimpl->depth_projection_views[i].subImage.imageArrayIndex = 0;
+    //    m_pimpl->depth_projection_views[i].subImage.imageRect.offset.x = 0;
+    //    m_pimpl->depth_projection_views[i].subImage.imageRect.offset.y = 0;
+    //    m_pimpl->depth_projection_views[i].subImage.imageRect.extent.width =
+    //        m_pimpl->projection_views[i].subImage.imageRect.extent.width;
+    //    m_pimpl->depth_projection_views[i].subImage.imageRect.extent.height =
+    //        m_pimpl->projection_views[i].subImage.imageRect.extent.height;
 
-        // depth is chained to projection, not submitted as separate layer
-        m_pimpl->projection_views[i].next = &(m_pimpl->depth_projection_views[i]);
-    };
+    //    // depth is chained to projection, not submitted as separate layer
+    //    m_pimpl->projection_views[i].next = &(m_pimpl->depth_projection_views[i]);
+    //};
 
     m_pimpl->projection_layer = {
         .type = XR_TYPE_COMPOSITION_LAYER_PROJECTION,
@@ -1599,27 +1628,27 @@ void OpenXrInterface::render(double drawableArea)
         }
     }
 
-    for (size_t i = 0; i < m_pimpl->projection_view_depth_swapchains.size(); ++i)
-    {
-        XrSwapchainImageAcquireInfo depth_acquire_info = {
-            .type = XR_TYPE_SWAPCHAIN_IMAGE_ACQUIRE_INFO, .next = NULL};
-        XrResult result = xrAcquireSwapchainImage(m_pimpl->projection_view_depth_swapchains[i].swapchain, &depth_acquire_info,
-                                         &m_pimpl->projection_view_depth_swapchains[i].acquired_index);
-        if (!m_pimpl->checkXrOutput(result, "Failed to acquire depth swapchain image!"))
-        {
-            m_pimpl->closing = true;
-            return;
-        }
+    //for (size_t i = 0; i < m_pimpl->projection_view_depth_swapchains.size(); ++i)
+    //{
+    //    XrSwapchainImageAcquireInfo depth_acquire_info = {
+    //        .type = XR_TYPE_SWAPCHAIN_IMAGE_ACQUIRE_INFO, .next = NULL};
+    //    XrResult result = xrAcquireSwapchainImage(m_pimpl->projection_view_depth_swapchains[i].swapchain, &depth_acquire_info,
+    //                                     &m_pimpl->projection_view_depth_swapchains[i].acquired_index);
+    //    if (!m_pimpl->checkXrOutput(result, "Failed to acquire depth swapchain image!"))
+    //    {
+    //        m_pimpl->closing = true;
+    //        return;
+    //    }
 
-        XrSwapchainImageWaitInfo depth_wait_info = {
-            .type = XR_TYPE_SWAPCHAIN_IMAGE_WAIT_INFO, .next = NULL, .timeout = 1000};
-        result = xrWaitSwapchainImage(m_pimpl->projection_view_depth_swapchains[i].swapchain, &depth_wait_info);
-        if (!m_pimpl->checkXrOutput(result, "Failed to wait for depth swapchain image!"))
-        {
-            m_pimpl->closing = true;
-            return;
-        }
-    }
+    //    XrSwapchainImageWaitInfo depth_wait_info = {
+    //        .type = XR_TYPE_SWAPCHAIN_IMAGE_WAIT_INFO, .next = NULL, .timeout = 1000};
+    //    result = xrWaitSwapchainImage(m_pimpl->projection_view_depth_swapchains[i].swapchain, &depth_wait_info);
+    //    if (!m_pimpl->checkXrOutput(result, "Failed to wait for depth swapchain image!"))
+    //    {
+    //        m_pimpl->closing = true;
+    //        return;
+    //    }
+    //}
 
 
     //-----------------------------------
@@ -1640,8 +1669,8 @@ void OpenXrInterface::render(double drawableArea)
     glBindFramebuffer(GL_FRAMEBUFFER, m_pimpl->glFrameBufferId);
     glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, m_pimpl->projection_view_swapchains[0].
         swapchain_images[m_pimpl->projection_view_swapchains[0].acquired_index].image, 0);
-    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, m_pimpl->projection_view_depth_swapchains[0].
-        swapchain_images[m_pimpl->projection_view_depth_swapchains[0].acquired_index].image, 0);
+    //glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, m_pimpl->projection_view_depth_swapchains[0].
+    //    swapchain_images[m_pimpl->projection_view_depth_swapchains[0].acquired_index].image, 0);
 
     //Clear the backgorund color
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -1688,8 +1717,8 @@ void OpenXrInterface::render(double drawableArea)
     glBindFramebuffer(GL_FRAMEBUFFER, m_pimpl->glFrameBufferId);
     glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, m_pimpl->projection_view_swapchains[1].
         swapchain_images[m_pimpl->projection_view_swapchains[1].acquired_index].image, 0);
-    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, m_pimpl->projection_view_depth_swapchains[1].
-        swapchain_images[m_pimpl->projection_view_depth_swapchains[1].acquired_index].image, 0);
+    //glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, m_pimpl->projection_view_depth_swapchains[1].
+    //    swapchain_images[m_pimpl->projection_view_depth_swapchains[1].acquired_index].image, 0);
 
 #ifdef DEBUG_RENDERING
     //Set blue color
@@ -1744,6 +1773,11 @@ void OpenXrInterface::render(double drawableArea)
     //------------------------------
     glFramebufferTexture(GL_READ_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, 0, 0);
     glBindFramebuffer(GL_READ_FRAMEBUFFER, 0);
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    glBindTexture(GL_TEXTURE_2D, 0);
+    glUseProgram(0);
+    glFlush();
+
 
 
     for (size_t i = 0; i < m_pimpl->projection_view_swapchains.size(); ++i)
@@ -1759,17 +1793,17 @@ void OpenXrInterface::render(double drawableArea)
         }
     }
 
-    for (size_t i = 0; i < m_pimpl->projection_view_depth_swapchains.size(); ++i)
-    {
-        XrSwapchainImageReleaseInfo depth_release_info = {
-            .type = XR_TYPE_SWAPCHAIN_IMAGE_RELEASE_INFO, .next = NULL};
-        XrResult result = xrReleaseSwapchainImage(m_pimpl->projection_view_depth_swapchains[i].swapchain, &depth_release_info);
-        if (!m_pimpl->checkXrOutput(result, "Failed to release depth swapchain image!"))
-        {
-            m_pimpl->closing = true;
-            return;
-        }
-    }
+    //for (size_t i = 0; i < m_pimpl->projection_view_depth_swapchains.size(); ++i)
+    //{
+    //    XrSwapchainImageReleaseInfo depth_release_info = {
+    //        .type = XR_TYPE_SWAPCHAIN_IMAGE_RELEASE_INFO, .next = NULL};
+    //    XrResult result = xrReleaseSwapchainImage(m_pimpl->projection_view_depth_swapchains[i].swapchain, &depth_release_info);
+    //    if (!m_pimpl->checkXrOutput(result, "Failed to release depth swapchain image!"))
+    //    {
+    //        m_pimpl->closing = true;
+    //        return;
+    //    }
+    //}
 
     glfwSwapBuffers(m_pimpl->window);
     glDisable(GL_DEPTH_TEST);
@@ -1923,7 +1957,7 @@ std::shared_ptr<IOpenXrQuadLayer> OpenXrInterface::addHeadFixedQuadLayer()
         .usageFlags = XR_SWAPCHAIN_USAGE_COLOR_ATTACHMENT_BIT |
         XR_SWAPCHAIN_USAGE_TRANSFER_DST_BIT |
         XR_SWAPCHAIN_USAGE_MUTABLE_FORMAT_BIT,
-        .format = GL_SRGB8_ALPHA8,
+        .format = m_pimpl->swapchain_format,
         .sampleCount = std::max(m_pimpl->projection_view_swapchain_create_info[0].sampleCount,
         m_pimpl->projection_view_swapchain_create_info[1].sampleCount),
         .width = std::min(m_pimpl->viewconfig_views[0].recommendedImageRectWidth,
@@ -2333,7 +2367,7 @@ void OpenXrInterface::close()
 
     m_pimpl->viewconfig_views.clear();
     m_pimpl->projection_views.clear();
-    m_pimpl->depth_projection_views.clear();
+    //m_pimpl->depth_projection_views.clear();
     m_pimpl->views.clear();
     m_pimpl->headLockedQuadLayers.clear();
     m_pimpl->openGLQuadLayers.clear();
