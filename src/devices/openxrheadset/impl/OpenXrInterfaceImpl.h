@@ -252,6 +252,8 @@ public:
 
     std::string getFingerName(XrHandJointEXT fingerIndex);
 
+	std::string getFBBodyJointName(XrBodyJointFB jointIndex);
+
     // DATA
 
     // the instance handle can be thought of as the basic connection to the OpenXR runtime
@@ -307,6 +309,9 @@ public:
     // flag to check if the hand tracking should be used.
     bool use_hand_tracking = true;
 
+    // flag to check if the FB body tracking should be used.
+    bool use_fb_body_tracking = true;
+
     // Pointer to function to get the list of trackers
     PFN_xrEnumerateViveTrackerPathsHTCX pfn_xrEnumerateViveTrackerPathsHTCX = NULL;
 
@@ -355,6 +360,13 @@ public:
     XrHandTrackerEXT right_hand_tracker = XR_NULL_HANDLE;
     PFN_xrLocateHandJointsEXT pfn_xrLocateHandJointsEXT = nullptr;
     PFN_xrCreateHandTrackerEXT pfn_xrCreateHandTrackerEXT = nullptr;
+
+    // FB Body tracking
+    std::vector<XrBodyJointLocationFB> fb_body_joint_locations;
+    XrBodyTrackerFB fb_body_tracker = XR_NULL_HANDLE;
+    PFN_xrLocateBodyJointsFB pfn_xrLocateBodyJointsFB = nullptr;
+    PFN_xrCreateBodyTrackerFB pfn_xrCreateBodyTrackerFB = nullptr;
+	PFN_xrDestroyBodyTrackerFB pfn_xrDestroyBodyTrackerFB = nullptr;
 
     // state of the application
     XrSessionState state = XR_SESSION_STATE_UNKNOWN;
@@ -446,6 +458,9 @@ public:
     // Hand tracking
     std::vector<NamedPoseVelocity> leftHandJointPoses;
     std::vector<NamedPoseVelocity> rightHandJointPoses;
+
+    // FB Body tracking
+    std::vector<NamedPoseVelocity> fbBodyJointPoses;
 
     // Filters
     PoseFilterType head_filter_type = PoseFilterType::JUMP_FILTER;

@@ -7,6 +7,7 @@
  */
 
 #include <impl/OpenXrInterfaceImpl.h>
+#include <OpenXrInterface.h>
 
 //#define DEBUG_RENDERING
 //#define DEBUG_RENDERING_LOCATION
@@ -43,6 +44,7 @@ bool OpenXrInterface::checkExtensions()
     bool gaze_supported = false;
     bool htc_facial_tracking_supported = false;
     bool hand_tracking_supported = false;
+    bool fb_body_tracking_supported = false;
 
     std::stringstream supported_extensions;
     supported_extensions << "Supported extensions: " <<std::endl;
@@ -76,6 +78,10 @@ bool OpenXrInterface::checkExtensions()
         }
         if (strcmp(XR_EXT_HAND_TRACKING_EXTENSION_NAME, ext_props[i].extensionName) == 0) {
             hand_tracking_supported = true;
+        }
+
+        if (strcmp(XR_FB_BODY_TRACKING_EXTENSION_NAME, ext_props[i].extensionName) == 0) {
+            fb_body_tracking_supported = true;
         }
 
         supported_extensions << std::endl << "    - " << ext_props[i].extensionName;
@@ -120,6 +126,11 @@ bool OpenXrInterface::checkExtensions()
     if (!hand_tracking_supported) {
         yCWarning(OPENXRHEADSET) << "Runtime does not support hand tracking!";
         m_pimpl->use_hand_tracking = false;
+    }
+
+    if (!fb_body_tracking_supported) {
+        yCWarning(OPENXRHEADSET) << "Runtime does not support FB Body Tracking!";
+        m_pimpl->use_fb_body_tracking = false;
     }
 
     return true;
@@ -177,7 +188,9 @@ bool OpenXrInterface::prepareXrInstance()
     {
         requestedExtensions.push_back(XR_EXT_HAND_TRACKING_EXTENSION_NAME);
     }
-
+    if (m_pimpl->use_fb_body_tracking)    {
+        requestedExtensions.push_back(XR_FB_BODY_TRACKING_EXTENSION_NAME);
+    }
     // Populate the info to create the instance
     XrInstanceCreateInfo instanceCreateInfo
             = {
@@ -305,6 +318,30 @@ bool OpenXrInterface::prepareXrInstance()
         }
     }
 
+    if (m_pimpl->use_fb_body_tracking)
+    {
+        XrResult result = xrGetInstanceProcAddr(m_pimpl->instance, "xrCreateBodyTrackerFB",
+            (PFN_xrVoidFunction*)&m_pimpl->pfn_xrCreateBodyTrackerFB);
+        if (!m_pimpl->checkXrOutput(result, "Failed to load xrCreateBodyTrackerFB function pointer"))
+            return false;
+        result = xrGetInstanceProcAddr(m_pimpl->instance, "xrLocateBodyJointsFB",
+            (PFN_xrVoidFunction*)&m_pimpl->pfn_xrLocateBodyJointsFB);
+        if (!m_pimpl->checkXrOutput(result, "Failed to load xrLocateBodyJointsFB function pointer"))
+            return false;
+        result = xrGetInstanceProcAddr(m_pimpl->instance, "xrDestroyBodyTrackerFB",
+			(PFN_xrVoidFunction*)&m_pimpl->pfn_xrDestroyBodyTrackerFB);
+        if (!m_pimpl->checkXrOutput(result, "Failed to load xrDestroyBodyTrackerFB function pointer"))
+			return false;
+
+        if (m_pimpl->pfn_xrCreateBodyTrackerFB == nullptr ||
+            m_pimpl->pfn_xrLocateBodyJointsFB == nullptr ||
+            m_pimpl->pfn_xrDestroyBodyTrackerFB == nullptr)
+        {
+            yCError(OPENXRHEADSET) << "Failed to load body tracking function pointers!";
+            return false;
+        }
+	}
+
     return true;
 
 }
@@ -424,6 +461,17 @@ void OpenXrInterface::checkSystemProperties()
         next_chain = &eye_gaze_props.next;
     }
 
+    XrSystemBodyTrackingPropertiesFB body_tracking_props;
+    body_tracking_props.type = XR_TYPE_SYSTEM_BODY_TRACKING_PROPERTIES_FB;
+    body_tracking_props.next = NULL;
+    body_tracking_props.supportsBodyTracking = XR_FALSE;
+
+    if (m_pimpl->use_fb_body_tracking)
+    {
+        *next_chain = &body_tracking_props;
+        next_chain = &body_tracking_props.next;
+    }
+
     XrResult result = xrGetSystemProperties(m_pimpl->instance, m_pimpl->system_id, &system_props);
     if (!XR_SUCCEEDED(result))
     {
@@ -458,6 +506,15 @@ void OpenXrInterface::checkSystemProperties()
             yCWarning(OPENXRHEADSET) << "The runtime does not seem to support eye gaze interaction! Trying to use it anyway.";
         }
     }
+
+    if (m_pimpl->use_fb_body_tracking)
+    {
+        if (!body_tracking_props.supportsBodyTracking)
+        {
+            yCWarning(OPENXRHEADSET) << "The runtime supports the FB body tracking, but the system does not. Disabling body tracking";
+			m_pimpl->use_fb_body_tracking = false;
+        }
+	}
 
 }
 
@@ -1063,6 +1120,45 @@ bool OpenXrInterface::prepareHandTracking() {
     return true;
 }
 
+bool OpenXrInterface::prepareFbBodyTracking()
+{
+    if (!m_pimpl->use_fb_body_tracking) {
+        return true;
+	}
+
+    XrBodyTrackerCreateInfoFB bodyTrackerCreateInfo =
+    {
+        .type = XR_TYPE_BODY_TRACKER_CREATE_INFO_FB,
+        .next = NULL,
+        .bodyJointSet = XR_BODY_JOINT_SET_FULL_BODY_META
+	};
+
+	XrResult result = m_pimpl->pfn_xrCreateBodyTrackerFB(m_pimpl->session, &bodyTrackerCreateInfo, &m_pimpl->fb_body_tracker);
+
+    if (!m_pimpl->checkXrOutput(result, "Failed to create body tracker. Avoiding to use body tracker"))
+    {
+        m_pimpl->use_fb_body_tracking = false;
+        return true;
+	}
+
+	m_pimpl->fb_body_joint_locations.resize(XR_FULL_BODY_JOINT_COUNT_META);
+	m_pimpl->fbBodyJointPoses.resize(XR_FULL_BODY_JOINT_COUNT_META);
+
+    for (size_t i = 0; i < XR_FULL_BODY_JOINT_COUNT_META; ++i)
+    {
+        auto& joint = m_pimpl->fbBodyJointPoses[i];
+        // We cannot get a velocity for body joints
+        // so we use the NONE filter type
+        joint.filterType = PoseFilterType::NONE;
+        // We get the poses in play space
+        joint.parentFrame = "";
+        std::string joint_name = m_pimpl->getFBBodyJointName(static_cast<XrBodyJointFB>(i));
+		joint.name = "fb_body_" + joint_name;
+    }
+
+    return true;
+}
+
 bool OpenXrInterface::prepareGlFramebuffer()
 {
     // Create a framebuffer for printing in our window (not required by OpenXr)
@@ -1483,6 +1579,44 @@ void OpenXrInterface::updateHandTracking()
     }
 }
 
+void OpenXrInterface::updateFbBodyTracking()
+{
+    for (auto& joint : m_pimpl->fbBodyJointPoses) {
+        joint.pose.positionValid = false;
+        joint.pose.rotationValid = false;
+	}
+
+    const XrBodyJointsLocateInfoFB locate_info =
+    {
+    .type = XR_TYPE_BODY_JOINTS_LOCATE_INFO_FB,
+    .next = NULL,
+    .baseSpace = m_pimpl->play_space,
+    .time = m_pimpl->frame_state.predictedDisplayTime
+    };
+
+    XrBodyJointLocationsFB body_joints =
+	{
+		.type = XR_TYPE_BODY_JOINT_LOCATIONS_FB,
+		.next = NULL,
+		.isActive = XR_FALSE,
+		.jointCount = XR_FULL_BODY_JOINT_COUNT_META,
+		.jointLocations = m_pimpl->fb_body_joint_locations.data()
+	};
+
+    // Locate body joints
+    XrResult result = m_pimpl->pfn_xrLocateBodyJointsFB(m_pimpl->fb_body_tracker, &locate_info, &body_joints);
+    if (XR_SUCCEEDED(result) && body_joints.isActive) {
+        for (uint32_t i = 0; i < body_joints.jointCount; ++i) {
+            const XrBodyJointLocationFB& joint = body_joints.jointLocations[i];
+            OpenXrInterface::Pose& jointPose = m_pimpl->fbBodyJointPoses[i].pose;
+            jointPose.position = toEigen(joint.pose.position);
+            jointPose.rotation = toEigen(joint.pose.orientation);
+            jointPose.positionValid = joint.locationFlags & XR_SPACE_LOCATION_POSITION_TRACKED_BIT;
+            jointPose.rotationValid = joint.locationFlags & XR_SPACE_LOCATION_ORIENTATION_TRACKED_BIT;
+        }
+	}
+}
+
 void OpenXrInterface::printInteractionProfiles()
 {
     for (auto& topLevel : m_pimpl->top_level_paths)
@@ -1846,6 +1980,7 @@ bool OpenXrInterface::initialize(const OpenXrInterfaceSettings &settings)
     m_pimpl->use_gaze = settings.useGaze;
     m_pimpl->use_expressions = settings.useExpressions;
     m_pimpl->use_hand_tracking = settings.useHandTracking;
+	m_pimpl->use_fb_body_tracking = settings.useFbBodyTracking;
     m_pimpl->head_filter_type = settings.headPoseFilterType;
     m_pimpl->hands_filter_type = settings.handsPoseFilterType;
     m_pimpl->htc_trackers_filter_type = settings.trackersPoseFilterType;
@@ -1867,6 +2002,7 @@ bool OpenXrInterface::initialize(const OpenXrInterfaceSettings &settings)
     ok = ok && prepareXrActions();
     ok = ok && prepareGlFramebuffer();
     ok = ok && prepareHandTracking();
+	ok = ok && prepareFbBodyTracking();
     m_pimpl->initialized = ok;
 
     return ok;
@@ -1899,6 +2035,9 @@ void OpenXrInterface::draw(double drawableArea)
         if (m_pimpl->use_hand_tracking){
             updateHandTracking();
         }
+		if (m_pimpl->use_fb_body_tracking) {
+			updateFbBodyTracking();
+		}
         if (m_pimpl->frame_state.shouldRender) {
             render(drawableArea);
         }
@@ -2177,6 +2316,9 @@ void OpenXrInterface::getAllPoses(std::vector<NamedPoseVelocity> &additionalPose
     if (m_pimpl->use_hand_tracking)
         numberOfPoses += m_pimpl->leftHandJointPoses.size() + m_pimpl->rightHandJointPoses.size();
 
+    if (m_pimpl->use_fb_body_tracking)
+		numberOfPoses += m_pimpl->fbBodyJointPoses.size();
+
     additionalPoses.resize(numberOfPoses);
     size_t poseIndex = 0;
 
@@ -2222,6 +2364,14 @@ void OpenXrInterface::getAllPoses(std::vector<NamedPoseVelocity> &additionalPose
         for (const auto& finger : m_pimpl->rightHandJointPoses)
         {
             additionalPoses[poseIndex] = finger;
+            poseIndex++;
+        }
+    }
+
+    if (m_pimpl->use_fb_body_tracking) {
+        for (const auto& joint : m_pimpl->fbBodyJointPoses)
+        {
+            additionalPoses[poseIndex] = joint;
             poseIndex++;
         }
     }
@@ -2302,6 +2452,12 @@ void OpenXrInterface::close()
         m_pimpl->pfn_xrDestroyFacialTrackerHTC(m_pimpl->htc_lip_facial_tracker);
         m_pimpl->htc_lip_facial_tracking_supported = false;
     }
+
+    if (m_pimpl->use_fb_body_tracking)
+    {
+        m_pimpl->pfn_xrDestroyBodyTrackerFB(m_pimpl->fb_body_tracker);
+        m_pimpl->use_fb_body_tracking = false;
+	}
 
     if (m_pimpl->glFrameBufferId != 0) {
         glDeleteFramebuffers(1, &(m_pimpl->glFrameBufferId));

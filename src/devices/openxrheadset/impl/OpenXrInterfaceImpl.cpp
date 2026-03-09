@@ -554,6 +554,273 @@ std::string OpenXrInterface::Implementation::getFingerName(XrHandJointEXT finger
     return output;
 }
 
+std::string OpenXrInterface::Implementation::getFBBodyJointName(XrBodyJointFB jointIndex)
+{
+    std::string output;
+    switch (static_cast<XrFullBodyJointMETA>(jointIndex))
+    {
+    case XR_FULL_BODY_JOINT_ROOT_META:
+        output = "root";
+        break;
+    case XR_FULL_BODY_JOINT_HIPS_META:
+        output = "hips";
+        break;
+    case XR_FULL_BODY_JOINT_SPINE_LOWER_META:
+        output = "spine_lower";
+        break;
+    case XR_FULL_BODY_JOINT_SPINE_MIDDLE_META:
+        output = "spine_middle";
+        break;
+    case XR_FULL_BODY_JOINT_SPINE_UPPER_META:
+        output = "spine_upper";
+        break;
+    case XR_FULL_BODY_JOINT_CHEST_META:
+        output = "chest";
+        break;
+    case XR_FULL_BODY_JOINT_NECK_META:
+        output = "neck";
+        break;
+    case XR_FULL_BODY_JOINT_HEAD_META:
+        output = "head";
+        break;
+    case XR_FULL_BODY_JOINT_LEFT_SHOULDER_META:
+        output = "left_shoulder";
+        break;
+    case XR_FULL_BODY_JOINT_LEFT_SCAPULA_META:
+        output = "left_scapula";
+        break;
+    case XR_FULL_BODY_JOINT_LEFT_ARM_UPPER_META:
+        output = "left_arm_upper";
+        break;
+    case XR_FULL_BODY_JOINT_LEFT_ARM_LOWER_META:
+        output = "left_arm_lower";
+        break;
+    case XR_FULL_BODY_JOINT_LEFT_HAND_WRIST_TWIST_META:
+        output = "left_hand_wrist_twist";
+        break;
+    case XR_FULL_BODY_JOINT_RIGHT_SHOULDER_META:
+        output = "right_shoulder";
+        break;
+    case XR_FULL_BODY_JOINT_RIGHT_SCAPULA_META:
+        output = "right_scapula";
+        break;
+    case XR_FULL_BODY_JOINT_RIGHT_ARM_UPPER_META:
+        output = "right_arm_upper";
+        break;
+    case XR_FULL_BODY_JOINT_RIGHT_ARM_LOWER_META:
+        output = "right_arm_lower";
+        break;
+    case XR_FULL_BODY_JOINT_RIGHT_HAND_WRIST_TWIST_META:
+        output = "right_hand_wrist_twist";
+        break;
+    case XR_FULL_BODY_JOINT_LEFT_HAND_PALM_META:
+        output = "left_hand_palm";
+        break;
+    case XR_FULL_BODY_JOINT_LEFT_HAND_WRIST_META:
+        output = "left_hand_wrist";
+        break;
+    case XR_FULL_BODY_JOINT_LEFT_HAND_THUMB_METACARPAL_META:
+        output = "left_hand_thumb_metacarpal";
+        break;
+    case XR_FULL_BODY_JOINT_LEFT_HAND_THUMB_PROXIMAL_META:
+        output = "left_hand_thumb_proximal";
+        break;
+    case XR_FULL_BODY_JOINT_LEFT_HAND_THUMB_DISTAL_META:
+        output = "left_hand_thumb_distal";
+        break;
+    case XR_FULL_BODY_JOINT_LEFT_HAND_THUMB_TIP_META:
+        output = "left_hand_thumb_tip";
+        break;
+    case XR_FULL_BODY_JOINT_LEFT_HAND_INDEX_METACARPAL_META:
+        output = "left_hand_index_metacarpal";
+        break;
+    case XR_FULL_BODY_JOINT_LEFT_HAND_INDEX_PROXIMAL_META:
+        output = "left_hand_index_proximal";
+        break;
+    case XR_FULL_BODY_JOINT_LEFT_HAND_INDEX_INTERMEDIATE_META:
+        output = "left_hand_index_intermediate";
+        break;
+    case XR_FULL_BODY_JOINT_LEFT_HAND_INDEX_DISTAL_META:
+        output = "left_hand_index_distal";
+        break;
+    case XR_FULL_BODY_JOINT_LEFT_HAND_INDEX_TIP_META:
+        output = "left_hand_index_tip";
+        break;
+    case XR_FULL_BODY_JOINT_LEFT_HAND_MIDDLE_METACARPAL_META:
+        output = "left_hand_middle_metacarpal";
+        break;
+    case XR_FULL_BODY_JOINT_LEFT_HAND_MIDDLE_PROXIMAL_META:
+        output = "left_hand_middle_proximal";
+        break;
+    case XR_FULL_BODY_JOINT_LEFT_HAND_MIDDLE_INTERMEDIATE_META:
+        output = "left_hand_middle_intermediate";
+        break;
+    case XR_FULL_BODY_JOINT_LEFT_HAND_MIDDLE_DISTAL_META:
+        output = "left_hand_middle_distal";
+        break;
+    case XR_FULL_BODY_JOINT_LEFT_HAND_MIDDLE_TIP_META:
+        output = "left_hand_middle_tip";
+        break;
+    case XR_FULL_BODY_JOINT_LEFT_HAND_RING_METACARPAL_META:
+        output = "left_hand_ring_metacarpal";
+        break;
+    case XR_FULL_BODY_JOINT_LEFT_HAND_RING_PROXIMAL_META:
+        output = "left_hand_ring_proximal";
+        break;
+    case XR_FULL_BODY_JOINT_LEFT_HAND_RING_INTERMEDIATE_META:
+        output = "left_hand_ring_intermediate";
+        break;
+    case XR_FULL_BODY_JOINT_LEFT_HAND_RING_DISTAL_META:
+        output = "left_hand_ring_distal";
+        break;
+    case XR_FULL_BODY_JOINT_LEFT_HAND_RING_TIP_META:
+        output = "left_hand_ring_tip";
+        break;
+    case XR_FULL_BODY_JOINT_LEFT_HAND_LITTLE_METACARPAL_META:
+        output = "left_hand_little_metacarpal";
+        break;
+    case XR_FULL_BODY_JOINT_LEFT_HAND_LITTLE_PROXIMAL_META:
+        output = "left_hand_little_proximal";
+        break;
+    case XR_FULL_BODY_JOINT_LEFT_HAND_LITTLE_INTERMEDIATE_META:
+        output = "left_hand_little_intermediate";
+        break;
+    case XR_FULL_BODY_JOINT_LEFT_HAND_LITTLE_DISTAL_META:
+        output = "left_hand_little_distal";
+        break;
+    case XR_FULL_BODY_JOINT_LEFT_HAND_LITTLE_TIP_META:
+        output = "left_hand_little_tip";
+        break;
+    case XR_FULL_BODY_JOINT_RIGHT_HAND_PALM_META:
+        output = "right_hand_palm";
+        break;
+    case XR_FULL_BODY_JOINT_RIGHT_HAND_WRIST_META:
+        output = "right_hand_wrist";
+        break;
+    case XR_FULL_BODY_JOINT_RIGHT_HAND_THUMB_METACARPAL_META:
+        output = "right_hand_thumb_metacarpal";
+        break;
+    case XR_FULL_BODY_JOINT_RIGHT_HAND_THUMB_PROXIMAL_META:
+        output = "right_hand_thumb_proximal";
+        break;
+    case XR_FULL_BODY_JOINT_RIGHT_HAND_THUMB_DISTAL_META:
+        output = "right_hand_thumb_distal";
+        break;
+    case XR_FULL_BODY_JOINT_RIGHT_HAND_THUMB_TIP_META:
+        output = "right_hand_thumb_tip";
+        break;
+    case XR_FULL_BODY_JOINT_RIGHT_HAND_INDEX_METACARPAL_META:
+        output = "right_hand_index_metacarpal";
+        break;
+    case XR_FULL_BODY_JOINT_RIGHT_HAND_INDEX_PROXIMAL_META:
+        output = "right_hand_index_proximal";
+        break;
+    case XR_FULL_BODY_JOINT_RIGHT_HAND_INDEX_INTERMEDIATE_META:
+        output = "right_hand_index_intermediate";
+        break;
+    case XR_FULL_BODY_JOINT_RIGHT_HAND_INDEX_DISTAL_META:
+        output = "right_hand_index_distal";
+        break;
+    case XR_FULL_BODY_JOINT_RIGHT_HAND_INDEX_TIP_META:
+        output = "right_hand_index_tip";
+        break;
+    case XR_FULL_BODY_JOINT_RIGHT_HAND_MIDDLE_METACARPAL_META:
+        output = "right_hand_middle_metacarpal";
+        break;
+    case XR_FULL_BODY_JOINT_RIGHT_HAND_MIDDLE_PROXIMAL_META:
+        output = "right_hand_middle_proximal";
+        break;
+    case XR_FULL_BODY_JOINT_RIGHT_HAND_MIDDLE_INTERMEDIATE_META:
+        output = "right_hand_middle_intermediate";
+        break;
+    case XR_FULL_BODY_JOINT_RIGHT_HAND_MIDDLE_DISTAL_META:
+        output = "right_hand_middle_distal";
+        break;
+    case XR_FULL_BODY_JOINT_RIGHT_HAND_MIDDLE_TIP_META:
+        output = "right_hand_middle_tip";
+        break;
+    case XR_FULL_BODY_JOINT_RIGHT_HAND_RING_METACARPAL_META:
+        output = "right_hand_ring_metacarpal";
+        break;
+    case XR_FULL_BODY_JOINT_RIGHT_HAND_RING_PROXIMAL_META:
+        output = "right_hand_ring_proximal";
+        break;
+    case XR_FULL_BODY_JOINT_RIGHT_HAND_RING_INTERMEDIATE_META:
+        output = "right_hand_ring_intermediate";
+        break;
+    case XR_FULL_BODY_JOINT_RIGHT_HAND_RING_DISTAL_META:
+        output = "right_hand_ring_distal";
+        break;
+    case XR_FULL_BODY_JOINT_RIGHT_HAND_RING_TIP_META:
+        output = "right_hand_ring_tip";
+        break;
+    case XR_FULL_BODY_JOINT_RIGHT_HAND_LITTLE_METACARPAL_META:
+        output = "right_hand_little_metacarpal";
+        break;
+    case XR_FULL_BODY_JOINT_RIGHT_HAND_LITTLE_PROXIMAL_META:
+        output = "right_hand_little_proximal";
+        break;
+    case XR_FULL_BODY_JOINT_RIGHT_HAND_LITTLE_INTERMEDIATE_META:
+        output = "right_hand_little_intermediate";
+        break;
+    case XR_FULL_BODY_JOINT_RIGHT_HAND_LITTLE_DISTAL_META:
+        output = "right_hand_little_distal";
+        break;
+    case XR_FULL_BODY_JOINT_RIGHT_HAND_LITTLE_TIP_META:
+        output = "right_hand_little_tip";
+        break;
+    case XR_FULL_BODY_JOINT_LEFT_UPPER_LEG_META:
+        output = "left_upper_leg";
+        break;
+    case XR_FULL_BODY_JOINT_LEFT_LOWER_LEG_META:
+        output = "left_lower_leg";
+        break;
+    case XR_FULL_BODY_JOINT_LEFT_FOOT_ANKLE_TWIST_META:
+        output = "left_foot_ankle_twist";
+        break;
+    case XR_FULL_BODY_JOINT_LEFT_FOOT_ANKLE_META:
+        output = "left_foot_ankle";
+        break;
+    case XR_FULL_BODY_JOINT_LEFT_FOOT_SUBTALAR_META:
+        output = "left_foot_subtalar";
+        break;
+    case XR_FULL_BODY_JOINT_LEFT_FOOT_TRANSVERSE_META:
+        output = "left_foot_transverse";
+        break;
+    case XR_FULL_BODY_JOINT_LEFT_FOOT_BALL_META:
+        output = "left_foot_ball";
+        break;
+    case XR_FULL_BODY_JOINT_RIGHT_UPPER_LEG_META:
+        output = "right_upper_leg";
+        break;
+    case XR_FULL_BODY_JOINT_RIGHT_LOWER_LEG_META:
+        output = "right_lower_leg";
+        break;
+    case XR_FULL_BODY_JOINT_RIGHT_FOOT_ANKLE_TWIST_META:
+        output = "right_foot_ankle_twist";
+        break;
+    case XR_FULL_BODY_JOINT_RIGHT_FOOT_ANKLE_META:
+        output = "right_foot_ankle";
+        break;
+    case XR_FULL_BODY_JOINT_RIGHT_FOOT_SUBTALAR_META:
+        output = "right_foot_subtalar";
+        break;
+    case XR_FULL_BODY_JOINT_RIGHT_FOOT_TRANSVERSE_META:
+        output = "right_foot_transverse";
+        break;
+    case XR_FULL_BODY_JOINT_RIGHT_FOOT_BALL_META:
+        output = "right_foot_ball";
+        break;
+    case XR_FULL_BODY_JOINT_COUNT_META:
+    case XR_FULL_BODY_JOINT_NONE_META:
+    case XR_FULL_BODY_JOINT_MAX_ENUM_META:
+    default:
+        output = "joint_unknown";
+        break;
+    }
+    return output;
+}
+
 InputActions &TopLevelPath::currentActions()
 {
     return interactionProfileActions[currentInteractionProfile];

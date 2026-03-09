@@ -75,6 +75,7 @@ struct OpenXrInterfaceSettings
     bool useGaze{ true };
     bool useExpressions{ true };
     bool useHandTracking{ true };
+    bool useFbBodyTracking{ true };
     PoseFilterType headPoseFilterType{ PoseFilterType::JUMP_FILTER };
     PoseFilterType handsPoseFilterType{ PoseFilterType::JUMP_FILTER };
     PoseFilterType trackersPoseFilterType{ PoseFilterType::JUMP_FILTER };
@@ -110,6 +111,8 @@ class OpenXrInterface
 
     bool prepareHandTracking();
 
+    bool prepareFbBodyTracking();
+
     void pollXrEvents();
 
     bool startXrFrame();
@@ -122,6 +125,8 @@ class OpenXrInterface
 
     void updateHandTracking();
 
+    void updateFbBodyTracking();
+    
     void printInteractionProfiles();
 
     bool updateConnectedTrackers();
