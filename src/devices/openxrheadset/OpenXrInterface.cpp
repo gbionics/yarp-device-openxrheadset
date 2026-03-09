@@ -311,7 +311,11 @@ bool OpenXrInterface::prepareXrInstance()
             (PFN_xrVoidFunction*)&m_pimpl->pfn_xrLocateHandJointsEXT);
         if (!m_pimpl->checkXrOutput(result, "Failed to load xrLocateHandJointsEXT function pointer"))
             return false;
-        if (m_pimpl->pfn_xrCreateHandTrackerEXT == nullptr || m_pimpl->pfn_xrLocateHandJointsEXT == nullptr)
+        result = xrGetInstanceProcAddr(m_pimpl->instance, "xrDestroyHandTrackerEXT",
+			(PFN_xrVoidFunction*)&m_pimpl->pfn_xrDestroyHandTrackerEXT);
+        if (m_pimpl->pfn_xrCreateHandTrackerEXT == nullptr ||
+            m_pimpl->pfn_xrLocateHandJointsEXT == nullptr ||
+            m_pimpl->pfn_xrDestroyHandTrackerEXT == nullptr)
         {
             yCError(OPENXRHEADSET) << "Failed to load hand tracking function pointers!";
             return false;
@@ -2452,6 +2456,13 @@ void OpenXrInterface::close()
         m_pimpl->pfn_xrDestroyFacialTrackerHTC(m_pimpl->htc_lip_facial_tracker);
         m_pimpl->htc_lip_facial_tracking_supported = false;
     }
+
+    if (m_pimpl->use_hand_tracking)
+    {
+        m_pimpl->pfn_xrDestroyHandTrackerEXT(m_pimpl->left_hand_tracker);
+        m_pimpl->pfn_xrDestroyHandTrackerEXT(m_pimpl->right_hand_tracker);
+        m_pimpl->use_hand_tracking = false;
+	}
 
     if (m_pimpl->use_fb_body_tracking)
     {

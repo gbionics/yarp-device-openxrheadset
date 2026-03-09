@@ -360,6 +360,7 @@ public:
     XrHandTrackerEXT right_hand_tracker = XR_NULL_HANDLE;
     PFN_xrLocateHandJointsEXT pfn_xrLocateHandJointsEXT = nullptr;
     PFN_xrCreateHandTrackerEXT pfn_xrCreateHandTrackerEXT = nullptr;
+    PFN_xrDestroyHandTrackerEXT pfn_xrDestroyHandTrackerEXT = nullptr;
 
     // FB Body tracking
     std::vector<XrBodyJointLocationFB> fb_body_joint_locations;
