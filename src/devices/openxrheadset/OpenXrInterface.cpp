@@ -45,6 +45,7 @@ bool OpenXrInterface::checkExtensions()
     bool htc_facial_tracking_supported = false;
     bool hand_tracking_supported = false;
     bool fb_body_tracking_supported = false;
+	bool meta_full_body_tracking_supported = false;
 
     std::stringstream supported_extensions;
     supported_extensions << "Supported extensions: " <<std::endl;
@@ -82,6 +83,10 @@ bool OpenXrInterface::checkExtensions()
 
         if (strcmp(XR_FB_BODY_TRACKING_EXTENSION_NAME, ext_props[i].extensionName) == 0) {
             fb_body_tracking_supported = true;
+        }
+
+        if (strcmp(XR_META_BODY_TRACKING_FULL_BODY_EXTENSION_NAME, ext_props[i].extensionName) == 0) {
+            meta_full_body_tracking_supported = true;
         }
 
         supported_extensions << std::endl << "    - " << ext_props[i].extensionName;
@@ -131,6 +136,10 @@ bool OpenXrInterface::checkExtensions()
     if (!fb_body_tracking_supported) {
         yCWarning(OPENXRHEADSET) << "Runtime does not support FB Body Tracking!";
         m_pimpl->use_fb_body_tracking = false;
+    }
+    else if (!meta_full_body_tracking_supported) {
+        yCWarning(OPENXRHEADSET) << "Runtime does not support Meta Full Body Tracking! Disabling FB Body Tracking";
+		m_pimpl->use_fb_body_tracking = false;
     }
 
     return true;
@@ -188,8 +197,10 @@ bool OpenXrInterface::prepareXrInstance()
     {
         requestedExtensions.push_back(XR_EXT_HAND_TRACKING_EXTENSION_NAME);
     }
-    if (m_pimpl->use_fb_body_tracking)    {
+    if (m_pimpl->use_fb_body_tracking)
+    {
         requestedExtensions.push_back(XR_FB_BODY_TRACKING_EXTENSION_NAME);
+		requestedExtensions.push_back(XR_META_BODY_TRACKING_FULL_BODY_EXTENSION_NAME);
     }
     // Populate the info to create the instance
     XrInstanceCreateInfo instanceCreateInfo
