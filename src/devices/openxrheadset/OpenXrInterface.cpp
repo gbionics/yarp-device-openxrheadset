@@ -1613,7 +1613,7 @@ void OpenXrInterface::updateFbBodyTracking()
 		.type = XR_TYPE_BODY_JOINT_LOCATIONS_FB,
 		.next = NULL,
 		.isActive = XR_FALSE,
-		.jointCount = XR_FULL_BODY_JOINT_COUNT_META,
+		.jointCount = static_cast<uint32_t>(m_pimpl->fb_body_joint_locations.size()),
 		.jointLocations = m_pimpl->fb_body_joint_locations.data()
 	};
 
