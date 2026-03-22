@@ -283,6 +283,7 @@ bool yarp::dev::OpenXrHeadset::open(yarp::os::Searchable &cfg)
     m_openXrInterfaceSettings.renderInPlaySpace = cfg.check("render_in_play_space") && (cfg.find("render_in_play_space").isNull() || cfg.find("render_in_play_space").asBool());
     bool noGaze = cfg.check("no_gaze") && (cfg.find("no_gaze").isNull() || cfg.find("no_gaze").asBool());
     m_openXrInterfaceSettings.useGaze = !noGaze;
+    m_openXrInterfaceSettings.forceUseGaze = cfg.check("force_use_gaze") && (cfg.find("force_use_gaze").isNull() || cfg.find("force_use_gaze").asBool());
 
     bool noExpressions = cfg.check("no_expressions") && (cfg.find("no_expressions").isNull() || cfg.find("no_expressions").asBool());
     m_openXrInterfaceSettings.useExpressions = !noExpressions;

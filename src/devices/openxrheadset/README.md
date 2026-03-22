@@ -44,6 +44,7 @@ This document lists all the configuration parameters parsed by the `OpenXrHeadse
 | `hide_window` | bool (flag) | `true` if `use_native_quad_layers` is set, `false` otherwise | If set (or set to `true`), hides the desktop mirror window. |
 | `render_in_play_space` | bool (flag) | `false` | If set (or set to `true`), renders in the play space instead of the view reference space. |
 | `no_gaze` | bool (flag) | `false` | If set (or set to `true`), disables gaze tracking. |
+| `force_use_gaze` | bool (flag) | `false` | If set (or set to `true`), forces the use of gaze tracking even if the runtime reports that the system does not support eye gaze interaction. Has no effect if `no_gaze` is set. |
 | `no_expressions` | bool (flag) | `false` | If set (or set to `true`), disables facial expression tracking. |
 | `no_hand_tracking` | bool (flag) | `false` | If set (or set to `true`), disables hand tracking. |
 | `no_fb_body_tracking` | bool (flag) | `false` | If set (or set to `true`), disables Meta (Facebook) body tracking. |

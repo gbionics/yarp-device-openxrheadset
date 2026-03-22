@@ -517,7 +517,15 @@ void OpenXrInterface::checkSystemProperties()
             system_props.systemId, eye_gaze_props.supportsEyeGazeInteraction);
         if (!eye_gaze_props.supportsEyeGazeInteraction)
         {
-            yCWarning(OPENXRHEADSET) << "The runtime does not seem to support eye gaze interaction! Trying to use it anyway.";
+            if (m_pimpl->force_use_gaze)
+            {
+                yCWarning(OPENXRHEADSET) << "The runtime does not seem to support eye gaze interaction! Trying to use it anyway since force_use_gaze is set.";
+            }
+            else
+            {
+                yCWarning(OPENXRHEADSET) << "The runtime does not seem to support eye gaze interaction! Disabling gaze. Set force_use_gaze to try using it anyway.";
+                m_pimpl->use_gaze = false;
+            }
         }
     }
 
@@ -1992,6 +2000,7 @@ bool OpenXrInterface::initialize(const OpenXrInterfaceSettings &settings)
     m_pimpl->hideWindow = settings.hideWindow;
     m_pimpl->renderInPlaySpace = settings.renderInPlaySpace;
     m_pimpl->use_gaze = settings.useGaze;
+    m_pimpl->force_use_gaze = settings.forceUseGaze;
     m_pimpl->use_expressions = settings.useExpressions;
     m_pimpl->use_hand_tracking = settings.useHandTracking;
 	m_pimpl->use_fb_body_tracking = settings.useFbBodyTracking;
@@ -2314,7 +2323,7 @@ void OpenXrInterface::getAllPoses(std::vector<NamedPoseVelocity> &additionalPose
     numberOfPoses += 3; //This is because the head and the hands are added manually
     for (size_t topLevelIndex = 0; topLevelIndex <  m_pimpl->top_level_paths.size(); ++topLevelIndex)
     {
-        if (topLevelIndex < 2) //Left and right hand are already considered with leftHandPose() and rightHandPose()
+        if (topLevelIndex < 2) //Left and right hands are already considered with leftHandPose() and rightHandPose()
         {
             if (m_pimpl->top_level_paths[topLevelIndex].currentActions().poses.size() > 1) //The first element is the one considerd by leftHandPose() and rightHandPose()
             {
