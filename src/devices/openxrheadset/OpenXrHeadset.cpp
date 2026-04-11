@@ -285,6 +285,12 @@ bool yarp::dev::OpenXrHeadset::open(yarp::os::Searchable &cfg)
     m_openXrInterfaceSettings.useGaze = !noGaze;
     m_openXrInterfaceSettings.forceUseGaze = cfg.check("force_use_gaze") && (cfg.find("force_use_gaze").isNull() || cfg.find("force_use_gaze").asBool());
 
+    if (noGaze && m_openXrInterfaceSettings.forceUseGaze)
+    {
+        yCError(OPENXRHEADSET) << "force_use_gaze cannot be true if no_gaze is set.";
+        return false;
+	}
+
     bool noExpressions = cfg.check("no_expressions") && (cfg.find("no_expressions").isNull() || cfg.find("no_expressions").asBool());
     m_openXrInterfaceSettings.useExpressions = !noExpressions;
 
