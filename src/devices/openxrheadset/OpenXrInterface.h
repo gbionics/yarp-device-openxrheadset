@@ -73,6 +73,7 @@ struct OpenXrInterfaceSettings
     bool hideWindow{false};
     bool renderInPlaySpace{false};
     bool useGaze{ true };
+    bool forceUseGaze{ false };
     bool useExpressions{ true };
     bool useHandTracking{ true };
     bool useFbBodyTracking{ true };

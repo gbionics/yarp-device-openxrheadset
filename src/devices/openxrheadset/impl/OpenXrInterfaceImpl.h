@@ -353,6 +353,9 @@ public:
     // Flag to enable the use of gaze
     bool use_gaze = true;
 
+    // Flag to force the use of gaze even if the system does not seem to support it
+    bool force_use_gaze = false;
+
     // Hand tracking
     std::vector<XrHandJointLocationEXT> left_hand_joint_locations;
     std::vector<XrHandJointLocationEXT> right_hand_joint_locations;
