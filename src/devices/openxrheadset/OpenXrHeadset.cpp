@@ -300,6 +300,9 @@ bool yarp::dev::OpenXrHeadset::open(yarp::os::Searchable &cfg)
 	bool noFbBodyTracking = cfg.check("no_fb_body_tracking") && (cfg.find("no_fb_body_tracking").isNull() || cfg.find("no_fb_body_tracking").asBool());
 	m_openXrInterfaceSettings.useFbBodyTracking = !noFbBodyTracking;
 
+    bool noBdBodyTracking = cfg.check("no_bd_body_tracking") && (cfg.find("no_bd_body_tracking").isNull() || cfg.find("no_bd_body_tracking").asBool());
+    m_openXrInterfaceSettings.useBdBodyTracking = !noBdBodyTracking;
+
     auto parsePoseFilterType = [](const std::string& str, PoseFilterType& filterType) -> bool
     {
         std::string lowerStr = str;

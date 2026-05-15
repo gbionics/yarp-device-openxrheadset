@@ -821,6 +821,90 @@ std::string OpenXrInterface::Implementation::getFBBodyJointName(XrFullBodyJointM
     return output;
 }
 
+std::string OpenXrInterface::Implementation::getBDBodyJointName(XrBodyJointBD jointIndex)
+{
+    std::string output;
+    switch (jointIndex)
+    {
+    case XR_BODY_JOINT_PELVIS_BD:
+        output = "pelvis";
+        break;
+    case XR_BODY_JOINT_LEFT_HIP_BD:
+        output = "left_hip";
+        break;
+    case XR_BODY_JOINT_RIGHT_HIP_BD:
+        output = "right_hip";
+        break;
+    case XR_BODY_JOINT_SPINE1_BD:
+        output = "spine1";
+        break;
+    case XR_BODY_JOINT_LEFT_KNEE_BD:
+        output = "left_knee";
+        break;
+    case XR_BODY_JOINT_RIGHT_KNEE_BD:
+        output = "right_knee";
+        break;
+    case XR_BODY_JOINT_SPINE2_BD:
+        output = "spine2";
+        break;
+    case XR_BODY_JOINT_LEFT_ANKLE_BD:
+        output = "left_ankle";
+        break;
+    case XR_BODY_JOINT_RIGHT_ANKLE_BD:
+        output = "right_ankle";
+        break;
+    case XR_BODY_JOINT_SPINE3_BD:
+        output = "spine3";
+        break;
+    case XR_BODY_JOINT_LEFT_FOOT_BD:
+        output = "left_foot";
+        break;
+    case XR_BODY_JOINT_RIGHT_FOOT_BD:
+        output = "right_foot";
+        break;
+    case XR_BODY_JOINT_NECK_BD:
+        output = "neck";
+        break;
+    case XR_BODY_JOINT_LEFT_COLLAR_BD:
+        output = "left_collar";
+        break;
+    case XR_BODY_JOINT_RIGHT_COLLAR_BD:
+        output = "right_collar";
+        break;
+    case XR_BODY_JOINT_HEAD_BD:
+        output = "head";
+        break;
+    case XR_BODY_JOINT_LEFT_SHOULDER_BD:
+        output = "left_shoulder";
+        break;
+    case XR_BODY_JOINT_RIGHT_SHOULDER_BD:
+        output = "right_shoulder";
+        break;
+    case XR_BODY_JOINT_LEFT_ELBOW_BD:
+        output = "left_elbow";
+        break;
+    case XR_BODY_JOINT_RIGHT_ELBOW_BD:
+        output = "right_elbow";
+        break;
+    case XR_BODY_JOINT_LEFT_WRIST_BD:
+        output = "left_wrist";
+        break;
+    case XR_BODY_JOINT_RIGHT_WRIST_BD:
+        output = "right_wrist";
+        break;
+    case XR_BODY_JOINT_LEFT_HAND_BD:
+        output = "left_hand";
+        break;
+    case XR_BODY_JOINT_RIGHT_HAND_BD:
+        output = "right_hand";
+        break;
+    default:
+        output = "unknown";
+        break;
+    }
+    return output;
+}
+
 InputActions &TopLevelPath::currentActions()
 {
     return interactionProfileActions[currentInteractionProfile];
