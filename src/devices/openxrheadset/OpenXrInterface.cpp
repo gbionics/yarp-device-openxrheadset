@@ -524,6 +524,17 @@ void OpenXrInterface::checkSystemProperties()
         next_chain = &body_tracking_props.next;
     }
 
+    XrSystemBodyTrackingPropertiesBD bd_body_tracking_props;
+    bd_body_tracking_props.type = XR_TYPE_SYSTEM_BODY_TRACKING_PROPERTIES_BD;
+    bd_body_tracking_props.next = NULL;
+    bd_body_tracking_props.supportsBodyTracking = XR_FALSE;
+
+    if (m_pimpl->use_bd_body_tracking)
+    {
+        *next_chain = &bd_body_tracking_props;
+        next_chain = &bd_body_tracking_props.next;
+    }
+
     XrResult result = xrGetSystemProperties(m_pimpl->instance, m_pimpl->system_id, &system_props);
     if (!XR_SUCCEEDED(result))
     {
@@ -575,6 +586,16 @@ void OpenXrInterface::checkSystemProperties()
 			m_pimpl->use_fb_body_tracking = false;
         }
 	}
+
+    if (m_pimpl->use_bd_body_tracking)
+    {
+        yCInfo(OPENXRHEADSET, "[BD] XrSystemBodyTrackingPropertiesBD.supportsBodyTracking = %d", bd_body_tracking_props.supportsBodyTracking);
+        if (!bd_body_tracking_props.supportsBodyTracking)
+        {
+            yCWarning(OPENXRHEADSET) << "[BD] System reports BD body tracking NOT supported. Body Tracking may need to be enabled in PICO device settings (Settings > Lab > Body Tracking). Disabling BD body tracking.";
+            m_pimpl->use_bd_body_tracking = false;
+        }
+    }
 
 }
 
@@ -1737,15 +1758,47 @@ void OpenXrInterface::updateBdBodyTracking()
     };
 
     XrResult result = m_pimpl->pfn_xrLocateBodyJointsBD(m_pimpl->bd_body_tracker, &locate_info, &body_joints);
-    if (XR_SUCCEEDED(result) && body_joints.allJointPosesTracked) {
-        for (uint32_t i = 0; i < body_joints.jointLocationCount; ++i) {
+    if (XR_SUCCEEDED(result))
+    {
+        // Log allJointPosesTracked once per second to avoid spam
+        static bool lastAllTracked = true;
+        if (body_joints.allJointPosesTracked != (XrBool32)lastAllTracked)
+        {
+            lastAllTracked = body_joints.allJointPosesTracked;
+            yCWarning(OPENXRHEADSET, "[BD] allJointPosesTracked changed to: %d", body_joints.allJointPosesTracked);
+        }
+
+        // On first call, log locationFlags of each joint (hex) for diagnostics
+        static bool diagDone = false;
+        if (!diagDone)
+        {
+            diagDone = true;
+            yCInfo(OPENXRHEADSET, "[BD] First frame joint locationFlags (hex):");
+            for (uint32_t i = 0; i < body_joints.jointLocationCount; ++i)
+            {
+                yCInfo(OPENXRHEADSET, "[BD]   joint[%2u] %-18s flags=0x%08x",
+                    i,
+                    m_pimpl->getBDBodyJointName(static_cast<XrBodyJointBD>(i)).c_str(),
+                    (unsigned int)body_joints.jointLocations[i].locationFlags);
+            }
+        }
+
+        for (uint32_t i = 0; i < body_joints.jointLocationCount; ++i)
+        {
             const XrBodyJointLocationBD& joint = body_joints.jointLocations[i];
             OpenXrInterface::Pose& jointPose = m_pimpl->bdBodyJointPoses[i].pose;
             jointPose.position = toEigen(joint.pose.position);
             jointPose.rotation = toEigen(joint.pose.orientation);
-            jointPose.positionValid = joint.locationFlags & XR_SPACE_LOCATION_POSITION_TRACKED_BIT;
-            jointPose.rotationValid = joint.locationFlags & XR_SPACE_LOCATION_ORIENTATION_TRACKED_BIT;
+            // Accept VALID (0x1) as well as TRACKED (0x2) so data flows even when not actively tracked
+            jointPose.positionValid = joint.locationFlags & XR_SPACE_LOCATION_POSITION_VALID_BIT;
+            jointPose.rotationValid = joint.locationFlags & XR_SPACE_LOCATION_ORIENTATION_VALID_BIT;
         }
+    }
+    else
+    {
+        char resultString[XR_MAX_RESULT_STRING_SIZE];
+        xrResultToString(m_pimpl->instance, result, resultString);
+        yCWarning(OPENXRHEADSET, "[BD] xrLocateBodyJointsBD failed: [%s].", resultString);
     }
 }
 
@@ -2175,10 +2228,17 @@ void OpenXrInterface::draw(double drawableArea)
         if (m_pimpl->use_bd_body_tracking) {
             updateBdBodyTracking();
         }
+        else {
+            yCInfo(OPENXRHEADSET) << "BD body tracking is disabled.";
+        }
         if (m_pimpl->frame_state.shouldRender) {
             render(drawableArea);
         }
         endXrFrame();
+    }
+    else
+    {
+        yCWarning(OPENXRHEADSET) << "The frame is not ready.";
     }
 }
 
