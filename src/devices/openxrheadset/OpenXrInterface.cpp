@@ -1768,12 +1768,12 @@ void OpenXrInterface::updateBdBodyTracking()
             yCWarning(OPENXRHEADSET, "[BD] allJointPosesTracked changed to: %d", body_joints.allJointPosesTracked);
         }
 
-        // On first call, log locationFlags of each joint (hex) for diagnostics
-        static bool diagDone = false;
-        if (!diagDone)
+        // On first call, log  of locationFlagseach joint (hex) for diagnostics
+        static bool diagUntilNonZero = false;
+        if (!diagUntilNonZero)
         {
-            diagDone = true;
-            yCInfo(OPENXRHEADSET, "[BD] First frame joint locationFlags (hex):");
+            diagUntilNonZero = body_joints.jointLocationCount > 0;
+            yCInfo(OPENXRHEADSET, "[BD] Found: %u Frame joint locationFlags (hex):", body_joints.jointLocationCount);
             for (uint32_t i = 0; i < body_joints.jointLocationCount; ++i)
             {
                 yCInfo(OPENXRHEADSET, "[BD]   joint[%2u] %-18s flags=0x%08x",

@@ -20,6 +20,7 @@
 #include <memory>
 #include <csignal>
 #include <unordered_map>
+#include <unordered_set>
 #include <chrono>
 #include <thread>
 
@@ -147,6 +148,23 @@ int main(int argc, char** argv)
     double frame_length = rf.check("frame_length", yarp::os::Value(0.5)).asFloat64();
     double label_height = rf.check("label_height", yarp::os::Value(0.1)).asFloat64();
     double position_scale = rf.check("position_scale", yarp::os::Value(1.0)).asFloat64();
+    std::unordered_set<std::string> frame_filter_set;
+    if (rf.check("frame_filter"))
+    {
+        yarp::os::Value filterValue = rf.find("frame_filter");
+        if (filterValue.isList())
+        {
+            yarp::os::Bottle* filterList = filterValue.asList();
+            for (size_t i = 0; i < filterList->size(); ++i)
+            {
+                frame_filter_set.insert(filterList->get(i).asString());
+            }
+        }
+        else
+        {
+            frame_filter_set.insert(filterValue.asString());
+        }
+    }
 
     std::unordered_map<std::string, std::shared_ptr<FrameViewer>> frames;
 
@@ -169,8 +187,19 @@ int main(int argc, char** argv)
     {
         if (yarp::os::Time::now() - lastIDsUpdate > 1.0)
         {
-            std::vector<std::string> ids; //When getting the ids, it seems that the input vector is not cleared. Passing a clean one every time.
-            if(tfReader->getAllFrameIds(ids))
+            std::vector<std::string> ids;
+            bool hasIds = false;
+            if (!frame_filter_set.empty())
+            {
+                ids.assign(frame_filter_set.begin(), frame_filter_set.end());
+                hasIds = true;
+            }
+            else
+            {
+                //When getting the ids, it seems that the input vector is not cleared. Passing a clean one every time.
+                hasIds = tfReader->getAllFrameIds(ids);
+            }
+            if (hasIds)
             {
                 for(std::string& id : ids)
                 {
