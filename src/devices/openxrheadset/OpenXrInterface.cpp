@@ -2228,9 +2228,6 @@ void OpenXrInterface::draw(double drawableArea)
         if (m_pimpl->use_bd_body_tracking) {
             updateBdBodyTracking();
         }
-        else {
-            yCInfo(OPENXRHEADSET) << "BD body tracking is disabled.";
-        }
         if (m_pimpl->frame_state.shouldRender) {
             render(drawableArea);
         }
