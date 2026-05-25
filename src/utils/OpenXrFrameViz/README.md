@@ -27,6 +27,7 @@ OpenXrFrameViz [options]
 | `frame_length` | double | `0.5` | The length of the coordinate frame axes displayed in the visualizer, in meters. |
 | `label_height` | double | `0.1` | The height of the text labels displayed next to each frame. |
 | `position_scale` | double | `1.0` | A scaling factor applied to the position of each frame for visualization purposes. |
+| `frame_filter` | list | *(none)* | If set, only the frames explicitly listed are displayed (e.g. `--frame_filter "(left_hand right_hand)"`). When provided, the listed frames are queried directly instead of calling `getAllFrameIds`.  |
 
 ### Transform Client Parameters
 

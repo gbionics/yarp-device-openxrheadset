@@ -20,6 +20,7 @@
 #include <memory>
 #include <csignal>
 #include <unordered_map>
+#include <unordered_set>
 #include <chrono>
 #include <thread>
 
@@ -73,7 +74,8 @@ struct FrameViewer
 {
     std::shared_ptr<FrameViewer> parent{nullptr};
     std::string name;
-    size_t vizIndex;
+    size_t vizIndex{0};
+    bool inVisualizer{false};
     iDynTree::Transform transform;
 };
 
@@ -147,16 +149,38 @@ int main(int argc, char** argv)
     double frame_length = rf.check("frame_length", yarp::os::Value(0.5)).asFloat64();
     double label_height = rf.check("label_height", yarp::os::Value(0.1)).asFloat64();
     double position_scale = rf.check("position_scale", yarp::os::Value(1.0)).asFloat64();
+    std::unordered_set<std::string> frame_filter_set;
+    if (rf.check("frame_filter"))
+    {
+        yarp::os::Value filterValue = rf.find("frame_filter");
+        if (filterValue.isList())
+        {
+            yarp::os::Bottle* filterList = filterValue.asList();
+            for (size_t i = 0; i < filterList->size(); ++i)
+            {
+                frame_filter_set.insert(filterList->get(i).asString());
+            }
+        }
+        else
+        {
+            frame_filter_set.insert(filterValue.asString());
+        }
+    }
 
     std::unordered_map<std::string, std::shared_ptr<FrameViewer>> frames;
 
     std::shared_ptr<FrameViewer> rootFrame = std::make_shared<FrameViewer>();
     rootFrame->name = rf.check("tf_root_frame", yarp::os::Value("openxr_origin")).asString();
     rootFrame->transform = openXrInertial;
-    rootFrame->vizIndex = visualizer.frames().addFrame(openXrInertial, frame_length);
-    iDynTree::ILabel* label = visualizer.frames().getFrameLabel(rootFrame->vizIndex);
-    label->setSize(label_height);
-    label->setText(rootFrame->name);
+    bool showRootFrame = frame_filter_set.empty() || frame_filter_set.count(rootFrame->name) > 0;
+    if (showRootFrame)
+    {
+        rootFrame->vizIndex = visualizer.frames().addFrame(openXrInertial, frame_length);
+        rootFrame->inVisualizer = true;
+        iDynTree::ILabel* label = visualizer.frames().getFrameLabel(rootFrame->vizIndex);
+        label->setSize(label_height);
+        label->setText(rootFrame->name);
+    }
     frames[rootFrame->name] = rootFrame;
 
     iDynTree::Transform transformBuffer;
@@ -169,8 +193,19 @@ int main(int argc, char** argv)
     {
         if (yarp::os::Time::now() - lastIDsUpdate > 1.0)
         {
-            std::vector<std::string> ids; //When getting the ids, it seems that the input vector is not cleared. Passing a clean one every time.
-            if(tfReader->getAllFrameIds(ids))
+            std::vector<std::string> ids;
+            bool hasIds = false;
+            if (!frame_filter_set.empty())
+            {
+                ids.assign(frame_filter_set.begin(), frame_filter_set.end());
+                hasIds = true;
+            }
+            else
+            {
+                //When getting the ids, it seems that the input vector is not cleared. Passing a clean one every time.
+                hasIds = tfReader->getAllFrameIds(ids);
+            }
+            if (hasIds)
             {
                 for(std::string& id : ids)
                 {
@@ -190,6 +225,7 @@ int main(int argc, char** argv)
                             newFrame->name = id;
                             newFrame->parent = rootFrame;
                             newFrame->vizIndex = visualizer.frames().addFrame(iDynTree::Transform::Identity(), frame_length);
+                            newFrame->inVisualizer = true;
                             iDynTree::ILabel* label = visualizer.frames().getFrameLabel(newFrame->vizIndex);
                             label->setSize(label_height);
                             label->setText(newFrame->name);
@@ -210,13 +246,16 @@ int main(int argc, char** argv)
                 {
                     iDynTree::toiDynTree(matrixBuffer, transformBuffer);
                     frame->transform = frame->parent->transform * transformBuffer;
-                    iDynTree::Transform transformScaled = frame->transform;
-                    const iDynTree::Position& position = frame->transform.getPosition();
-                    iDynTree::Position positionScaled(position[0] * position_scale,
-                                                      position[1] * position_scale,
-                                                      position[2] * position_scale);
-                    transformScaled.setPosition(positionScaled);
-                    visualizer.frames().updateFrame(frame->vizIndex, transformScaled);
+                    if (frame->inVisualizer)
+                    {
+                        iDynTree::Transform transformScaled = frame->transform;
+                        const iDynTree::Position& position = frame->transform.getPosition();
+                        iDynTree::Position positionScaled(position[0] * position_scale,
+                                                          position[1] * position_scale,
+                                                          position[2] * position_scale);
+                        transformScaled.setPosition(positionScaled);
+                        visualizer.frames().updateFrame(frame->vizIndex, transformScaled);
+                    }
                 }
             }
         }
