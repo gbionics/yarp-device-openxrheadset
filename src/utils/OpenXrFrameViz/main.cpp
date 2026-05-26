@@ -74,7 +74,8 @@ struct FrameViewer
 {
     std::shared_ptr<FrameViewer> parent{nullptr};
     std::string name;
-    size_t vizIndex;
+    size_t vizIndex{0};
+    bool inVisualizer{false};
     iDynTree::Transform transform;
 };
 
@@ -171,10 +172,15 @@ int main(int argc, char** argv)
     std::shared_ptr<FrameViewer> rootFrame = std::make_shared<FrameViewer>();
     rootFrame->name = rf.check("tf_root_frame", yarp::os::Value("openxr_origin")).asString();
     rootFrame->transform = openXrInertial;
-    rootFrame->vizIndex = visualizer.frames().addFrame(openXrInertial, frame_length);
-    iDynTree::ILabel* label = visualizer.frames().getFrameLabel(rootFrame->vizIndex);
-    label->setSize(label_height);
-    label->setText(rootFrame->name);
+    bool showRootFrame = frame_filter_set.empty() || frame_filter_set.count(rootFrame->name) > 0;
+    if (showRootFrame)
+    {
+        rootFrame->vizIndex = visualizer.frames().addFrame(openXrInertial, frame_length);
+        rootFrame->inVisualizer = true;
+        iDynTree::ILabel* label = visualizer.frames().getFrameLabel(rootFrame->vizIndex);
+        label->setSize(label_height);
+        label->setText(rootFrame->name);
+    }
     frames[rootFrame->name] = rootFrame;
 
     iDynTree::Transform transformBuffer;
@@ -219,6 +225,7 @@ int main(int argc, char** argv)
                             newFrame->name = id;
                             newFrame->parent = rootFrame;
                             newFrame->vizIndex = visualizer.frames().addFrame(iDynTree::Transform::Identity(), frame_length);
+                            newFrame->inVisualizer = true;
                             iDynTree::ILabel* label = visualizer.frames().getFrameLabel(newFrame->vizIndex);
                             label->setSize(label_height);
                             label->setText(newFrame->name);
@@ -239,13 +246,16 @@ int main(int argc, char** argv)
                 {
                     iDynTree::toiDynTree(matrixBuffer, transformBuffer);
                     frame->transform = frame->parent->transform * transformBuffer;
-                    iDynTree::Transform transformScaled = frame->transform;
-                    const iDynTree::Position& position = frame->transform.getPosition();
-                    iDynTree::Position positionScaled(position[0] * position_scale,
-                                                      position[1] * position_scale,
-                                                      position[2] * position_scale);
-                    transformScaled.setPosition(positionScaled);
-                    visualizer.frames().updateFrame(frame->vizIndex, transformScaled);
+                    if (frame->inVisualizer)
+                    {
+                        iDynTree::Transform transformScaled = frame->transform;
+                        const iDynTree::Position& position = frame->transform.getPosition();
+                        iDynTree::Position positionScaled(position[0] * position_scale,
+                                                          position[1] * position_scale,
+                                                          position[2] * position_scale);
+                        transformScaled.setPosition(positionScaled);
+                        visualizer.frames().updateFrame(frame->vizIndex, transformScaled);
+                    }
                 }
             }
         }
