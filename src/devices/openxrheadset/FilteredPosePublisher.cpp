@@ -86,13 +86,15 @@ OpenXrInterface::NamedPoseVelocity FilteredPosePublisher::filterJumps(const Open
 
     if (positionHasJumped)
     {
-        yCWarning(OPENXRHEADSET) << label() << "position had a jump.";
+        // yCWarning(OPENXRHEADSET) << label() << "position had a jump.";
+        yCWarningThrottle(OPENXRHEADSET, 8) << label() << "position had a jump. Last valid position: " << m_lastValidData.pose.position.transpose() << ", measured position: " << output.pose.position.transpose();
         output.pose.position = (1 - interpolationFactor) * m_lastValidData.pose.position + interpolationFactor * output.pose.position;
     }
 
     if (rotationHasJumped)
     {
-        yCWarning(OPENXRHEADSET) << label() << "rotation had a jump.";
+        // yCWarning(OPENXRHEADSET) << label() << "rotation had a jump.";
+        yCWarningThrottle(OPENXRHEADSET, 8) << label() << "rotation had a jump. Last valid rotation: " << m_lastValidData.pose.rotation.coeffs().transpose() << ", measured rotation: " << output.pose.rotation.coeffs().transpose();
         output.pose.rotation = m_lastValidData.pose.rotation.slerp(interpolationFactor, output.pose.rotation);
     }
 

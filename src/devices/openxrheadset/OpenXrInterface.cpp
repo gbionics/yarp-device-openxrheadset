@@ -1773,13 +1773,13 @@ void OpenXrInterface::updateBdBodyTracking()
         if (!diagUntilNonZero)
         {
             diagUntilNonZero = body_joints.jointLocationCount > 0;
-            yCInfo(OPENXRHEADSET, "[BD] Found: %u Frame joint locationFlags (hex):", body_joints.jointLocationCount);
-            for (uint32_t i = 0; i < body_joints.jointLocationCount; ++i)
+            if (body_joints.jointLocationCount == 0)
             {
-                yCInfo(OPENXRHEADSET, "[BD]   joint[%2u] %-18s flags=0x%08x",
-                    i,
-                    m_pimpl->getBDBodyJointName(static_cast<XrBodyJointBD>(i)).c_str(),
-                    (unsigned int)body_joints.jointLocations[i].locationFlags);
+                yCWarningThrottle(OPENXRHEADSET,5, "[BD] No joints found.");
+            }
+            else
+            {
+                yCInfo(OPENXRHEADSET, "[BD] Found: %u Frame joint locationFlags (hex):", body_joints.jointLocationCount);
             }
         }
 
