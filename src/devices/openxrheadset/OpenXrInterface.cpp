@@ -11,6 +11,41 @@
 //#define DEBUG_RENDERING
 //#define DEBUG_RENDERING_LOCATION
 
+namespace {
+
+// Applies a rigid-body offset to a NamedPoseVelocity and renames it.
+OpenXrInterface::NamedPoseVelocity retargetPoseViaHeadOffset(
+    const OpenXrInterface::Pose& offset,
+    const OpenXrInterface::NamedPoseVelocity& source,
+    const std::string& outputName)
+{
+    OpenXrInterface::NamedPoseVelocity result;
+    result.name = outputName;
+    result.parentFrame = source.parentFrame;
+    result.filterType = PoseFilterType::NONE;
+    result.pose = offset * source.pose;
+
+    result.velocity.linearValid  = source.velocity.linearValid  && offset.rotationValid;
+    result.velocity.angularValid = source.velocity.angularValid && offset.rotationValid;
+    if (result.velocity.linearValid)
+        result.velocity.linear  = offset.rotation * source.velocity.linear;
+    if (result.velocity.angularValid)
+        result.velocity.angular = offset.rotation * source.velocity.angular;
+
+    return result;
+}
+
+// Converts an openxr_* pose name to its bd_* counterpart.
+std::string openxrToBDBodyName(const std::string& name)
+{
+    constexpr std::string_view prefix = "openxr_";
+    if (name.substr(0, prefix.size()) == prefix)
+        return "bd_" + name.substr(prefix.size());
+    return "bd_" + name;
+}
+
+} // anonymous namespace
+
 
 bool OpenXrInterface::checkExtensions()
 {
@@ -2515,6 +2550,10 @@ void OpenXrInterface::getAllPoses(std::vector<NamedPoseVelocity> &additionalPose
     if (m_pimpl->use_bd_body_tracking)
         numberOfPoses += m_pimpl->bdBodyJointPoses.size();
 
+    // BD-aligned hand tracking: one retargeted grip pose per hand + all finger joints
+    if (m_pimpl->use_hand_tracking && m_pimpl->use_bd_body_tracking)
+        numberOfPoses += m_pimpl->leftHandJointPoses.size() + m_pimpl->rightHandJointPoses.size();
+
     additionalPoses.resize(numberOfPoses);
     size_t poseIndex = 0;
 
@@ -2577,6 +2616,20 @@ void OpenXrInterface::getAllPoses(std::vector<NamedPoseVelocity> &additionalPose
             additionalPoses[poseIndex] = joint;
             poseIndex++;
         }
+    }
+
+    if (m_pimpl->use_hand_tracking && m_pimpl->use_bd_body_tracking) {
+        // Compute the per-frame offset: T_offset = P_bd_body_head * P_openxr_head^-1
+        // Both poses are in play_space, so this offset captures the difference in
+        // coordinate conventions between the two head representations.
+        const Pose& bdBodyHeadPose = m_pimpl->bdBodyJointPoses[XR_BODY_JOINT_HEAD_BD].pose;
+        const Pose offset = bdBodyHeadPose * headPose().inverse();
+
+        // Retarget all finger joints
+        for (const auto& finger : m_pimpl->leftHandJointPoses)
+            additionalPoses[poseIndex++] = retargetPoseViaHeadOffset(offset, finger, openxrToBDBodyName(finger.name));
+        for (const auto& finger : m_pimpl->rightHandJointPoses)
+            additionalPoses[poseIndex++] = retargetPoseViaHeadOffset(offset, finger, openxrToBDBodyName(finger.name));
     }
 }
 
@@ -2758,4 +2811,14 @@ OpenXrInterface::Pose OpenXrInterface::Pose::operator*(const OpenXrInterface::Po
     result.position = position + rotation * other.position;
     result.rotation = rotation * other.rotation;
     return result;
+}
+
+OpenXrInterface::Pose OpenXrInterface::Pose::inverse() const
+{
+    OpenXrInterface::Pose inv;
+    inv.rotationValid = rotationValid;
+    inv.positionValid = positionValid && rotationValid;
+    inv.rotation = rotation.inverse();
+    inv.position = -(inv.rotation * position);
+    return inv;
 }

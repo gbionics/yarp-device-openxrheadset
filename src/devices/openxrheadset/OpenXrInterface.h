@@ -152,6 +152,7 @@ public:
         Eigen::Quaternionf rotation;
 
         Pose operator*(const Pose& other) const;
+        Pose inverse() const;
     };
 
     struct Velocity
