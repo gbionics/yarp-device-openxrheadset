@@ -624,10 +624,10 @@ void OpenXrInterface::checkSystemProperties()
 
     if (m_pimpl->use_bd_body_tracking)
     {
-        yCInfo(OPENXRHEADSET, "[BD] XrSystemBodyTrackingPropertiesBD.supportsBodyTracking = %d", bd_body_tracking_props.supportsBodyTracking);
+        yCInfo(OPENXRHEADSET, "XrSystemBodyTrackingPropertiesBD.supportsBodyTracking = %d", bd_body_tracking_props.supportsBodyTracking);
         if (!bd_body_tracking_props.supportsBodyTracking)
         {
-            yCWarning(OPENXRHEADSET) << "[BD] System reports BD body tracking NOT supported. Body Tracking may need to be enabled in PICO device settings (Settings > Lab > Body Tracking). Disabling BD body tracking.";
+            yCWarning(OPENXRHEADSET) << "System reports BD body tracking NOT supported. Disabling BD body tracking.";
             m_pimpl->use_bd_body_tracking = false;
         }
     }
@@ -1795,26 +1795,26 @@ void OpenXrInterface::updateBdBodyTracking()
     XrResult result = m_pimpl->pfn_xrLocateBodyJointsBD(m_pimpl->bd_body_tracker, &locate_info, &body_joints);
     if (XR_SUCCEEDED(result))
     {
-        // Log allJointPosesTracked once per second to avoid spam
+        // Log allJointPosesTracked when it changes
         static bool lastAllTracked = true;
         if (body_joints.allJointPosesTracked != (XrBool32)lastAllTracked)
         {
             lastAllTracked = body_joints.allJointPosesTracked;
-            yCWarning(OPENXRHEADSET, "[BD] allJointPosesTracked changed to: %d", body_joints.allJointPosesTracked);
+            yCWarning(OPENXRHEADSET, "[BDBodyTracking] allJointPosesTracked changed to: %d", body_joints.allJointPosesTracked);
         }
 
-        // On first call, log  of locationFlagseach joint (hex) for diagnostics
+        // Log the number of joints found until it's greater than 0
         static bool diagUntilNonZero = false;
         if (!diagUntilNonZero)
         {
             diagUntilNonZero = body_joints.jointLocationCount > 0;
             if (body_joints.jointLocationCount == 0)
             {
-                yCWarningThrottle(OPENXRHEADSET,5, "[BD] No joints found.");
+                yCWarningThrottle(OPENXRHEADSET,5, "[BDBodyTracking] No joints found.");
             }
             else
             {
-                yCInfo(OPENXRHEADSET, "[BD] Found: %u Frame joint locationFlags (hex):", body_joints.jointLocationCount);
+                yCInfo(OPENXRHEADSET, "[BDBodyTracking] Found: %u Frame joints", body_joints.jointLocationCount);
             }
         }
 
@@ -1833,7 +1833,7 @@ void OpenXrInterface::updateBdBodyTracking()
     {
         char resultString[XR_MAX_RESULT_STRING_SIZE];
         xrResultToString(m_pimpl->instance, result, resultString);
-        yCWarning(OPENXRHEADSET, "[BD] xrLocateBodyJointsBD failed: [%s].", resultString);
+        yCWarning(OPENXRHEADSET, "[BDBodyTracking] xrLocateBodyJointsBD failed: [%s].", resultString);
     }
 }
 
@@ -2267,10 +2267,6 @@ void OpenXrInterface::draw(double drawableArea)
             render(drawableArea);
         }
         endXrFrame();
-    }
-    else
-    {
-        yCWarning(OPENXRHEADSET) << "The frame is not ready.";
     }
 }
 
