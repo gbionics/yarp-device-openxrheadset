@@ -1297,7 +1297,11 @@ bool OpenXrInterface::prepareBdBodyTracking()
     }
 
     m_pimpl->bd_body_joint_locations.resize(XR_BODY_JOINT_COUNT_BD);
-    m_pimpl->bdBodyJointPoses.resize(XR_BODY_JOINT_COUNT_BD);
+
+    const size_t bdAlignedHandJointsCount = m_pimpl->use_hand_tracking
+            ? (m_pimpl->leftHandJointPoses.size() + m_pimpl->rightHandJointPoses.size())
+            : 0;
+    m_pimpl->bdBodyJointPoses.resize(XR_BODY_JOINT_COUNT_BD + bdAlignedHandJointsCount);
 
     for (size_t i = 0; i < XR_BODY_JOINT_COUNT_BD; ++i)
     {
@@ -1306,6 +1310,25 @@ bool OpenXrInterface::prepareBdBodyTracking()
         joint.parentFrame = "";
         std::string joint_name = m_pimpl->getBDBodyJointName(static_cast<XrBodyJointBD>(i));
         joint.name = "bd_body_" + joint_name;
+    }
+
+    if (m_pimpl->use_hand_tracking)
+    {
+        size_t bdAlignedIndex = XR_BODY_JOINT_COUNT_BD;
+        for (const auto& finger : m_pimpl->leftHandJointPoses)
+        {
+            auto& joint = m_pimpl->bdBodyJointPoses[bdAlignedIndex++];
+            joint.filterType = PoseFilterType::NONE;
+            joint.parentFrame = "";
+            joint.name = openxrToBDBodyName(finger.name);
+        }
+        for (const auto& finger : m_pimpl->rightHandJointPoses)
+        {
+            auto& joint = m_pimpl->bdBodyJointPoses[bdAlignedIndex++];
+            joint.filterType = PoseFilterType::NONE;
+            joint.parentFrame = "";
+            joint.name = openxrToBDBodyName(finger.name);
+        }
     }
 
     return true;
@@ -1827,6 +1850,31 @@ void OpenXrInterface::updateBdBodyTracking()
             // Accept VALID (0x1) as well as TRACKED (0x2) so data flows even when not actively tracked
             jointPose.positionValid = joint.locationFlags & XR_SPACE_LOCATION_POSITION_VALID_BIT;
             jointPose.rotationValid = joint.locationFlags & XR_SPACE_LOCATION_ORIENTATION_VALID_BIT;
+        }
+
+        if (m_pimpl->use_hand_tracking &&
+            body_joints.jointLocationCount > XR_BODY_JOINT_HEAD_BD)
+        {
+            const Pose& bdBodyHeadPose = m_pimpl->bdBodyJointPoses[XR_BODY_JOINT_HEAD_BD].pose;
+            if (bdBodyHeadPose.positionValid && bdBodyHeadPose.rotationValid)
+            {
+                // Compute the per-frame offset: T_offset = P_bd_body_head * P_openxr_head^-1
+                // Both poses are in play_space, so this offset captures the difference in
+                // coordinate conventions between the two head representations.
+                const Pose offset = bdBodyHeadPose * headPose().inverse();
+
+                size_t bdAlignedIndex = XR_BODY_JOINT_COUNT_BD;
+                for (const auto& finger : m_pimpl->leftHandJointPoses)
+                {
+                    m_pimpl->bdBodyJointPoses[bdAlignedIndex++] =
+                        retargetPoseViaHeadOffset(offset, finger, openxrToBDBodyName(finger.name));
+                }
+                for (const auto& finger : m_pimpl->rightHandJointPoses)
+                {
+                    m_pimpl->bdBodyJointPoses[bdAlignedIndex++] =
+                        retargetPoseViaHeadOffset(offset, finger, openxrToBDBodyName(finger.name));
+                }
+            }
         }
     }
     else
@@ -2546,10 +2594,6 @@ void OpenXrInterface::getAllPoses(std::vector<NamedPoseVelocity> &additionalPose
     if (m_pimpl->use_bd_body_tracking)
         numberOfPoses += m_pimpl->bdBodyJointPoses.size();
 
-    // BD-aligned hand tracking: one retargeted grip pose per hand + all finger joints
-    if (m_pimpl->use_hand_tracking && m_pimpl->use_bd_body_tracking)
-        numberOfPoses += m_pimpl->leftHandJointPoses.size() + m_pimpl->rightHandJointPoses.size();
-
     additionalPoses.resize(numberOfPoses);
     size_t poseIndex = 0;
 
@@ -2612,20 +2656,6 @@ void OpenXrInterface::getAllPoses(std::vector<NamedPoseVelocity> &additionalPose
             additionalPoses[poseIndex] = joint;
             poseIndex++;
         }
-    }
-
-    if (m_pimpl->use_hand_tracking && m_pimpl->use_bd_body_tracking) {
-        // Compute the per-frame offset: T_offset = P_bd_body_head * P_openxr_head^-1
-        // Both poses are in play_space, so this offset captures the difference in
-        // coordinate conventions between the two head representations.
-        const Pose& bdBodyHeadPose = m_pimpl->bdBodyJointPoses[XR_BODY_JOINT_HEAD_BD].pose;
-        const Pose offset = bdBodyHeadPose * headPose().inverse();
-
-        // Retarget all finger joints
-        for (const auto& finger : m_pimpl->leftHandJointPoses)
-            additionalPoses[poseIndex++] = retargetPoseViaHeadOffset(offset, finger, openxrToBDBodyName(finger.name));
-        for (const auto& finger : m_pimpl->rightHandJointPoses)
-            additionalPoses[poseIndex++] = retargetPoseViaHeadOffset(offset, finger, openxrToBDBodyName(finger.name));
     }
 }
 
