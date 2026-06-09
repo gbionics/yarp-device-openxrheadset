@@ -1831,7 +1831,7 @@ void OpenXrInterface::updateBdBodyTracking()
         if (!diagUntilNonZero)
         {
             diagUntilNonZero = body_joints.jointLocationCount > 0;
-            if (body_joints.jointLocationCount == 0)
+            if (!diagUntilNonZero)
             {
                 yCWarningThrottle(OPENXRHEADSET,5, "[BDBodyTracking] No joints found.");
             }
