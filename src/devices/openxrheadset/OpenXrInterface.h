@@ -77,6 +77,7 @@ struct OpenXrInterfaceSettings
     bool useExpressions{ true };
     bool useHandTracking{ true };
     bool useFbBodyTracking{ true };
+    bool useBdBodyTracking{ true };
     PoseFilterType headPoseFilterType{ PoseFilterType::JUMP_FILTER };
     PoseFilterType handsPoseFilterType{ PoseFilterType::JUMP_FILTER };
     PoseFilterType trackersPoseFilterType{ PoseFilterType::JUMP_FILTER };
@@ -113,6 +114,7 @@ class OpenXrInterface
     bool prepareHandTracking();
 
     bool prepareFbBodyTracking();
+    bool prepareBdBodyTracking();
 
     void pollXrEvents();
 
@@ -127,6 +129,7 @@ class OpenXrInterface
     void updateHandTracking();
 
     void updateFbBodyTracking();
+    void updateBdBodyTracking();
     
     void printInteractionProfiles();
 
@@ -149,6 +152,7 @@ public:
         Eigen::Quaternionf rotation;
 
         Pose operator*(const Pose& other) const;
+        Pose inverse() const;
     };
 
     struct Velocity
