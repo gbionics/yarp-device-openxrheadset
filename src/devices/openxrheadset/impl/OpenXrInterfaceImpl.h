@@ -375,7 +375,10 @@ public:
 
     // BD (PICO) Body tracking
     bool use_bd_body_tracking = true;
+    bool use_bd_body_tracking_auxiliary_metrics = true;
+    PoseFilterType bd_body_filter_type = PoseFilterType::JUMP_FILTER;
     std::vector<XrBodyJointLocationBD> bd_body_joint_locations;
+    std::vector<XrBodyJointVelocityBD> bd_body_joint_velocities;
     XrBodyTrackerBD bd_body_tracker = XR_NULL_HANDLE;
     PFN_xrLocateBodyJointsBD pfn_xrLocateBodyJointsBD = nullptr;
     PFN_xrCreateBodyTrackerBD pfn_xrCreateBodyTrackerBD = nullptr;

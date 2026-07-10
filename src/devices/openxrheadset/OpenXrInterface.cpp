@@ -81,6 +81,7 @@ bool OpenXrInterface::checkExtensions()
     bool fb_body_tracking_supported = false;
 	bool meta_full_body_tracking_supported = false;
     bool bd_body_tracking_supported = false;
+    bool bd_body_tracking_auxiliary_metrics_supported = false;
 
     std::stringstream supported_extensions;
     supported_extensions << "Supported extensions: " <<std::endl;
@@ -122,6 +123,10 @@ bool OpenXrInterface::checkExtensions()
 
         if (strcmp(XR_BD_BODY_TRACKING_EXTENSION_NAME, ext_props[i].extensionName) == 0) {
             bd_body_tracking_supported = true;
+        }
+
+        if (strcmp(XR_BD_BODY_TRACKING_AUXILIARY_METRICS_EXTENSION_NAME, ext_props[i].extensionName) == 0) {
+            bd_body_tracking_auxiliary_metrics_supported = true;
         }
 
         if (strcmp(XR_META_BODY_TRACKING_FULL_BODY_EXTENSION_NAME, ext_props[i].extensionName) == 0) {
@@ -184,6 +189,14 @@ bool OpenXrInterface::checkExtensions()
     if (!bd_body_tracking_supported) {
         yCWarning(OPENXRHEADSET) << "Runtime does not support BD Body Tracking!";
         m_pimpl->use_bd_body_tracking = false;
+    }
+
+    if (!m_pimpl->use_bd_body_tracking) {
+        m_pimpl->use_bd_body_tracking_auxiliary_metrics = false;
+    }
+    else if (!bd_body_tracking_auxiliary_metrics_supported) {
+        yCWarning(OPENXRHEADSET) << "Runtime does not support BD Body Tracking Auxiliary Metrics! Jump filtering will not be applied to BD body joints.";
+        m_pimpl->use_bd_body_tracking_auxiliary_metrics = false;
     }
 
     return true;
@@ -249,6 +262,10 @@ bool OpenXrInterface::prepareXrInstance()
     if (m_pimpl->use_bd_body_tracking)
     {
         requestedExtensions.push_back(XR_BD_BODY_TRACKING_EXTENSION_NAME);
+    }
+    if (m_pimpl->use_bd_body_tracking_auxiliary_metrics)
+    {
+        requestedExtensions.push_back(XR_BD_BODY_TRACKING_AUXILIARY_METRICS_EXTENSION_NAME);
     }
     // Populate the info to create the instance
     XrInstanceCreateInfo instanceCreateInfo
@@ -1298,15 +1315,21 @@ bool OpenXrInterface::prepareBdBodyTracking()
 
     m_pimpl->bd_body_joint_locations.resize(XR_BODY_JOINT_COUNT_BD);
 
+    if (m_pimpl->use_bd_body_tracking_auxiliary_metrics)
+    {
+        m_pimpl->bd_body_joint_velocities.resize(XR_BODY_JOINT_COUNT_BD);
+    }
+
     const size_t bdAlignedHandJointsCount = m_pimpl->use_hand_tracking
             ? (m_pimpl->leftHandJointPoses.size() + m_pimpl->rightHandJointPoses.size())
             : 0;
     m_pimpl->bdBodyJointPoses.resize(XR_BODY_JOINT_COUNT_BD + bdAlignedHandJointsCount);
 
+    const auto filterType = m_pimpl->use_bd_body_tracking_auxiliary_metrics ? m_pimpl->bd_body_filter_type : PoseFilterType::NONE;
     for (size_t i = 0; i < XR_BODY_JOINT_COUNT_BD; ++i)
     {
         auto& joint = m_pimpl->bdBodyJointPoses[i];
-        joint.filterType = PoseFilterType::NONE;
+        joint.filterType = filterType;
         joint.parentFrame = "";
         std::string joint_name = m_pimpl->getBDBodyJointName(static_cast<XrBodyJointBD>(i));
         joint.name = "bd_body_" + joint_name;
@@ -1797,6 +1820,8 @@ void OpenXrInterface::updateBdBodyTracking()
     for (auto& joint : m_pimpl->bdBodyJointPoses) {
         joint.pose.positionValid = false;
         joint.pose.rotationValid = false;
+        joint.velocity.linearValid = false;
+        joint.velocity.angularValid = false;
     }
 
     const XrBodyJointsLocateInfoBD locate_info =
@@ -1807,10 +1832,18 @@ void OpenXrInterface::updateBdBodyTracking()
         .time = m_pimpl->frame_state.predictedDisplayTime
     };
 
+    XrBodyJointVelocitiesBD body_joint_velocities =
+    {
+        .type = XR_TYPE_BODY_JOINT_VELOCITIES_BD,
+        .next = NULL,
+        .velocityCount = static_cast<uint32_t>(m_pimpl->bd_body_joint_velocities.size()),
+        .velocities = m_pimpl->bd_body_joint_velocities.data()
+    };
+
     XrBodyJointLocationsBD body_joints =
     {
         .type = XR_TYPE_BODY_JOINT_LOCATIONS_BD,
-        .next = NULL,
+        .next = m_pimpl->use_bd_body_tracking_auxiliary_metrics ? &body_joint_velocities : NULL,
         .jointLocationCount = static_cast<uint32_t>(m_pimpl->bd_body_joint_locations.size()),
         .jointLocations = m_pimpl->bd_body_joint_locations.data()
     };
@@ -1850,6 +1883,16 @@ void OpenXrInterface::updateBdBodyTracking()
             // Accept VALID (0x1) as well as TRACKED (0x2) so data flows even when not actively tracked
             jointPose.positionValid = joint.locationFlags & XR_SPACE_LOCATION_POSITION_VALID_BIT;
             jointPose.rotationValid = joint.locationFlags & XR_SPACE_LOCATION_ORIENTATION_VALID_BIT;
+
+            if (m_pimpl->use_bd_body_tracking_auxiliary_metrics && i < body_joint_velocities.velocityCount)
+            {
+                const XrBodyJointVelocityBD& jointVelocity = body_joint_velocities.velocities[i];
+                OpenXrInterface::Velocity& velocity = m_pimpl->bdBodyJointPoses[i].velocity;
+                velocity.linearValid = jointVelocity.velocityFlags & XR_SPACE_VELOCITY_LINEAR_VALID_BIT;
+                velocity.angularValid = jointVelocity.velocityFlags & XR_SPACE_VELOCITY_ANGULAR_VALID_BIT;
+                velocity.linear = toEigen(jointVelocity.linearVelocity);
+                velocity.angular = toEigen(jointVelocity.angularVelocity);
+            }
         }
 
         if (m_pimpl->use_hand_tracking &&
@@ -2250,9 +2293,11 @@ bool OpenXrInterface::initialize(const OpenXrInterfaceSettings &settings)
     m_pimpl->use_expressions = settings.useExpressions;
     m_pimpl->use_hand_tracking = settings.useHandTracking;
 	m_pimpl->use_fb_body_tracking = settings.useFbBodyTracking;
+    m_pimpl->use_bd_body_tracking_auxiliary_metrics = settings.useBdBodyTrackingAuxiliaryMetrics;
     m_pimpl->head_filter_type = settings.headPoseFilterType;
     m_pimpl->hands_filter_type = settings.handsPoseFilterType;
     m_pimpl->htc_trackers_filter_type = settings.trackersPoseFilterType;
+    m_pimpl->bd_body_filter_type = settings.bdBodyPoseFilterType;
 
 #ifdef DEBUG_RENDERING_LOCATION
     m_pimpl->renderInPlaySpace = true;

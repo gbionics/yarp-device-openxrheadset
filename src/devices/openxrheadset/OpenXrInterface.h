@@ -78,9 +78,11 @@ struct OpenXrInterfaceSettings
     bool useHandTracking{ true };
     bool useFbBodyTracking{ true };
     bool useBdBodyTracking{ true };
+    bool useBdBodyTrackingAuxiliaryMetrics{ true };
     PoseFilterType headPoseFilterType{ PoseFilterType::JUMP_FILTER };
     PoseFilterType handsPoseFilterType{ PoseFilterType::JUMP_FILTER };
     PoseFilterType trackersPoseFilterType{ PoseFilterType::JUMP_FILTER };
+    PoseFilterType bdBodyPoseFilterType{ PoseFilterType::JUMP_FILTER };
 };
 
 class OpenXrInterface

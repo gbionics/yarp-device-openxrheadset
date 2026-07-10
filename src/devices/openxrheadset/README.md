@@ -48,6 +48,8 @@ This document lists all the configuration parameters parsed by the `OpenXrHeadse
 | `no_expressions` | bool (flag) | `false` | If set (or set to `true`), disables facial expression tracking. |
 | `no_hand_tracking` | bool (flag) | `false` | If set (or set to `true`), disables hand tracking. |
 | `no_fb_body_tracking` | bool (flag) | `false` | If set (or set to `true`), disables Meta (Facebook) body tracking. |
+| `no_bd_body_tracking` | bool (flag) | `false` | If set (or set to `true`), disables PICO (BD) body tracking. |
+| `no_bd_body_tracking_auxiliary_metrics` | bool (flag) | `false` | If set (or set to `true`), disables jump filtering on BD body joints. |
 
 ---
 
@@ -58,6 +60,7 @@ This document lists all the configuration parameters parsed by the `OpenXrHeadse
 | `head_pose_filter_type` | string | `"jump"` | Filter type for the head pose. Allowed values: `"none"`, `"jump"`. |
 | `hands_pose_filter_type` | string | `"jump"` | Filter type for hand poses. Allowed values: `"none"`, `"jump"`. |
 | `trackers_pose_filter_type` | string | `"jump"` | Filter type for tracker poses. Allowed values: `"none"`, `"jump"`. |
+| `bd_body_pose_filter_type` | string | `"jump"` | Filter type for the core PICO (BD) body joints. Allowed values: `"none"`, `"jump"`. Only applied if the `XR_BD_body_tracking_auxiliary_metrics` extension is available, since the jump filter requires joint velocities; otherwise no filtering is applied regardless of this setting. |
 
 ---
 

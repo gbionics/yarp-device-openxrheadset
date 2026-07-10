@@ -303,6 +303,10 @@ bool yarp::dev::OpenXrHeadset::open(yarp::os::Searchable &cfg)
     bool noBdBodyTracking = cfg.check("no_bd_body_tracking") && (cfg.find("no_bd_body_tracking").isNull() || cfg.find("no_bd_body_tracking").asBool());
     m_openXrInterfaceSettings.useBdBodyTracking = !noBdBodyTracking;
 
+    bool noBdBodyTrackingAuxiliaryMetrics = cfg.check("no_bd_body_tracking_auxiliary_metrics") &&
+            (cfg.find("no_bd_body_tracking_auxiliary_metrics").isNull() || cfg.find("no_bd_body_tracking_auxiliary_metrics").asBool());
+    m_openXrInterfaceSettings.useBdBodyTrackingAuxiliaryMetrics = !noBdBodyTrackingAuxiliaryMetrics;
+
     auto parsePoseFilterType = [](const std::string& str, PoseFilterType& filterType) -> bool
     {
         std::string lowerStr = str;
@@ -338,6 +342,13 @@ bool yarp::dev::OpenXrHeadset::open(yarp::os::Searchable &cfg)
     if (!parsePoseFilterType(trackersFilterTypeStr, m_openXrInterfaceSettings.trackersPoseFilterType))
     {
         yCError(OPENXRHEADSET) << "Unrecognized trackers_pose_filter_type:" << trackersFilterTypeStr;
+        return false;
+    }
+
+    std::string bdBodyFilterTypeStr = cfg.check("bd_body_pose_filter_type", yarp::os::Value("jump")).asString();
+    if (!parsePoseFilterType(bdBodyFilterTypeStr, m_openXrInterfaceSettings.bdBodyPoseFilterType))
+    {
+        yCError(OPENXRHEADSET) << "Unrecognized bd_body_pose_filter_type:" << bdBodyFilterTypeStr;
         return false;
     }
 
