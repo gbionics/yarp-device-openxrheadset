@@ -303,6 +303,8 @@ bool yarp::dev::OpenXrHeadset::open(yarp::os::Searchable &cfg)
     bool noBdBodyTracking = cfg.check("no_bd_body_tracking") && (cfg.find("no_bd_body_tracking").isNull() || cfg.find("no_bd_body_tracking").asBool());
     m_openXrInterfaceSettings.useBdBodyTracking = !noBdBodyTracking;
 
+    m_openXrInterfaceSettings.picoMotionTrackerCount = cfg.check("pico_motion_tracker_count", yarp::os::Value(0)).asInt32();
+
     auto parsePoseFilterType = [](const std::string& str, PoseFilterType& filterType) -> bool
     {
         std::string lowerStr = str;

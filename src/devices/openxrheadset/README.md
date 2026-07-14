@@ -48,6 +48,7 @@ This document lists all the configuration parameters parsed by the `OpenXrHeadse
 | `no_expressions` | bool (flag) | `false` | If set (or set to `true`), disables facial expression tracking. |
 | `no_hand_tracking` | bool (flag) | `false` | If set (or set to `true`), disables hand tracking. |
 | `no_fb_body_tracking` | bool (flag) | `false` | If set (or set to `true`), disables Meta (Facebook) body tracking. |
+| `pico_motion_tracker_count` | int | `0` | Number of PICO motion trackers to request at startup. |
 
 ---
 

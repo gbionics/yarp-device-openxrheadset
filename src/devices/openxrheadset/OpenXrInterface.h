@@ -78,6 +78,7 @@ struct OpenXrInterfaceSettings
     bool useHandTracking{ true };
     bool useFbBodyTracking{ true };
     bool useBdBodyTracking{ true };
+    int picoMotionTrackerCount{ 0 }; //If greater than 0, enables the raw PICO motion trackers (XR_PICO_motion_tracking).
     PoseFilterType headPoseFilterType{ PoseFilterType::JUMP_FILTER };
     PoseFilterType handsPoseFilterType{ PoseFilterType::JUMP_FILTER };
     PoseFilterType trackersPoseFilterType{ PoseFilterType::JUMP_FILTER };
@@ -115,6 +116,7 @@ class OpenXrInterface
 
     bool prepareFbBodyTracking();
     bool prepareBdBodyTracking();
+    bool preparePicoMotionTracking();
 
     void pollXrEvents();
 
@@ -130,6 +132,7 @@ class OpenXrInterface
 
     void updateFbBodyTracking();
     void updateBdBodyTracking();
+    void updatePicoMotionTracking();
     
     void printInteractionProfiles();
 

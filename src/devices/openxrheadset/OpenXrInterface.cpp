@@ -81,6 +81,7 @@ bool OpenXrInterface::checkExtensions()
     bool fb_body_tracking_supported = false;
 	bool meta_full_body_tracking_supported = false;
     bool bd_body_tracking_supported = false;
+    bool pico_motion_tracking_supported = false;
 
     std::stringstream supported_extensions;
     supported_extensions << "Supported extensions: " <<std::endl;
@@ -126,6 +127,10 @@ bool OpenXrInterface::checkExtensions()
 
         if (strcmp(XR_META_BODY_TRACKING_FULL_BODY_EXTENSION_NAME, ext_props[i].extensionName) == 0) {
             meta_full_body_tracking_supported = true;
+        }
+
+        if (strcmp(XR_PICO_MOTION_TRACKING_EXTENSION_NAME, ext_props[i].extensionName) == 0) {
+            pico_motion_tracking_supported = true;
         }
 
         supported_extensions << std::endl << "    - " << ext_props[i].extensionName;
@@ -184,6 +189,15 @@ bool OpenXrInterface::checkExtensions()
     if (!bd_body_tracking_supported) {
         yCWarning(OPENXRHEADSET) << "Runtime does not support BD Body Tracking!";
         m_pimpl->use_bd_body_tracking = false;
+    }
+
+    m_pimpl->pico_motion_tracking_supported = pico_motion_tracking_supported;
+    if (!pico_motion_tracking_supported) {
+        if (m_pimpl->pico_motion_tracker_count > 0)
+        {
+            yCWarning(OPENXRHEADSET) << "Runtime does not support PICO Motion Tracking!";
+        }
+        m_pimpl->pico_motion_tracker_count = 0;
     }
 
     return true;
@@ -249,6 +263,10 @@ bool OpenXrInterface::prepareXrInstance()
     if (m_pimpl->use_bd_body_tracking)
     {
         requestedExtensions.push_back(XR_BD_BODY_TRACKING_EXTENSION_NAME);
+    }
+    if (m_pimpl->pico_motion_tracker_count > 0)
+    {
+        requestedExtensions.push_back(XR_PICO_MOTION_TRACKING_EXTENSION_NAME);
     }
     // Populate the info to create the instance
     XrInstanceCreateInfo instanceCreateInfo
@@ -425,6 +443,25 @@ bool OpenXrInterface::prepareXrInstance()
             m_pimpl->pfn_xrDestroyBodyTrackerBD == nullptr)
         {
             yCError(OPENXRHEADSET) << "Failed to load BD body tracking function pointers!";
+            return false;
+        }
+    }
+
+    if (m_pimpl->pico_motion_tracker_count > 0)
+    {
+        XrResult result = xrGetInstanceProcAddr(m_pimpl->instance, "xrRequestMotionTrackerDevicePICO",
+            (PFN_xrVoidFunction*)&m_pimpl->pfn_xrRequestMotionTrackerDevicePICO);
+        if (!m_pimpl->checkXrOutput(result, "Failed to load xrRequestMotionTrackerDevicePICO function pointer"))
+            return false;
+        result = xrGetInstanceProcAddr(m_pimpl->instance, "xrLocateMotionTrackerPICO",
+            (PFN_xrVoidFunction*)&m_pimpl->pfn_xrLocateMotionTrackerPICO);
+        if (!m_pimpl->checkXrOutput(result, "Failed to load xrLocateMotionTrackerPICO function pointer"))
+            return false;
+
+        if (m_pimpl->pfn_xrRequestMotionTrackerDevicePICO == nullptr ||
+            m_pimpl->pfn_xrLocateMotionTrackerPICO == nullptr)
+        {
+            yCError(OPENXRHEADSET) << "Failed to load PICO motion tracking function pointers!";
             return false;
         }
     }
@@ -1334,6 +1371,26 @@ bool OpenXrInterface::prepareBdBodyTracking()
     return true;
 }
 
+bool OpenXrInterface::preparePicoMotionTracking()
+{
+    if (m_pimpl->pico_motion_tracker_count <= 0) {
+        return true;
+    }
+
+    XrResult result = m_pimpl->pfn_xrRequestMotionTrackerDevicePICO(m_pimpl->session,
+                                                                     static_cast<uint32_t>(m_pimpl->pico_motion_tracker_count));
+
+    if (!m_pimpl->checkXrOutput(result, "Failed to request PICO motion trackers. Avoiding to use PICO motion tracking"))
+    {
+        m_pimpl->pico_motion_tracker_count = 0;
+        return true;
+    }
+
+    yCInfo(OPENXRHEADSET) << "Requested" << m_pimpl->pico_motion_tracker_count << "PICO motion tracker(s).";
+
+    return true;
+}
+
 bool OpenXrInterface::prepareGlFramebuffer()
 {
     // Create a framebuffer for printing in our window (not required by OpenXr)
@@ -1445,6 +1502,41 @@ void OpenXrInterface::pollXrEvents()
                 m_pimpl->local_reference_space_changing = true;
                 m_pimpl->local_reference_space_change_time = referenceSpaceChanging.changeTime;
             }
+
+            break;
+        }
+        case XR_TYPE_EVENT_DATA_REQUEST_MOTION_TRACKER_COMPLETE_PICO: {
+            const XrEventDataRequestMotionTrackerCompletePICO& motionTrackerEvent =
+                    *reinterpret_cast<XrEventDataRequestMotionTrackerCompletePICO*>(&runtime_event);
+
+            if (XR_SUCCEEDED(motionTrackerEvent.result))
+            {
+                m_pimpl->pico_motion_tracker_ids.assign(motionTrackerEvent.trackerIds,
+                                                         motionTrackerEvent.trackerIds + motionTrackerEvent.trackerCount);
+                m_pimpl->picoMotionTrackerPoses.resize(m_pimpl->pico_motion_tracker_ids.size());
+                for (size_t i = 0; i < m_pimpl->picoMotionTrackerPoses.size(); ++i)
+                {
+                    auto& tracker = m_pimpl->picoMotionTrackerPoses[i];
+                    tracker.name = "pico_motion_tracker_" + std::to_string(i);
+                    tracker.parentFrame = "";
+                    tracker.filterType = m_pimpl->pico_motion_tracker_filter_type;
+                }
+                yCInfo(OPENXRHEADSET, "EVENT: PICO motion tracker request complete. %u tracker(s) connected.",
+                       motionTrackerEvent.trackerCount);
+            }
+            else
+            {
+                yCWarning(OPENXRHEADSET, "EVENT: PICO motion tracker request failed.");
+            }
+
+            break;
+        }
+        case XR_TYPE_EVENT_DATA_MOTION_TRACKER_CONNECTION_STATE_CHANGED_PICO: {
+            const XrEventDataMotionTrackerConnectionStateChangedPICO& connectionEvent =
+                    *reinterpret_cast<XrEventDataMotionTrackerConnectionStateChangedPICO*>(&runtime_event);
+            yCWarning(OPENXRHEADSET, "EVENT: PICO motion tracker connection state changed (state: %d). "
+                      "Reconnection handling is not implemented; restart the device to pick up changes.",
+                      connectionEvent.state);
 
             break;
         }
@@ -1885,6 +1977,64 @@ void OpenXrInterface::updateBdBodyTracking()
     }
 }
 
+void OpenXrInterface::updatePicoMotionTracking()
+{
+    for (auto& tracker : m_pimpl->picoMotionTrackerPoses) {
+        tracker.pose.positionValid = false;
+        tracker.pose.rotationValid = false;
+    }
+
+    const XrMotionTrackerLocationInfoPICO locationInfo =
+    {
+        .type = XR_TYPE_MOTION_TRACKER_LOCATION_INFO_PICO,
+        .next = NULL,
+        .baseSpace = m_pimpl->play_space,
+        .time = m_pimpl->frame_state.predictedDisplayTime
+    };
+
+    for (size_t i = 0; i < m_pimpl->pico_motion_tracker_ids.size(); ++i)
+    {
+        XrMotionTrackerSpaceVelocityPICO velocity =
+        {
+            .type = XR_TYPE_MOTION_TRACKER_SPACE_VELOCITY_PICO,
+            .next = NULL
+        };
+
+        XrMotionTrackerSpaceLocationPICO location =
+        {
+            .type = XR_TYPE_MOTION_TRACKER_SPACE_LOCATION_PICO,
+            .next = &velocity
+        };
+
+        XrResult result = m_pimpl->pfn_xrLocateMotionTrackerPICO(m_pimpl->session, m_pimpl->pico_motion_tracker_ids[i],
+                                                                  &locationInfo, &location);
+
+        if (XR_SUCCEEDED(result))
+        {
+            OpenXrInterface::NamedPoseVelocity& tracker = m_pimpl->picoMotionTrackerPoses[i];
+            tracker.pose.position = toEigen(location.pose.position);
+            tracker.pose.rotation = toEigen(location.pose.orientation);
+            tracker.pose.positionValid = location.locationFlags & XR_SPACE_LOCATION_POSITION_VALID_BIT;
+            tracker.pose.rotationValid = location.locationFlags & XR_SPACE_LOCATION_ORIENTATION_VALID_BIT;
+
+            tracker.velocity.linearValid = velocity.velocityFlags & XR_SPACE_VELOCITY_LINEAR_VALID_BIT;
+            tracker.velocity.angularValid = velocity.velocityFlags & XR_SPACE_VELOCITY_ANGULAR_VALID_BIT;
+            if (tracker.velocity.linearValid)
+            {
+                tracker.velocity.linear = toEigen(velocity.linearVelocity);
+            }
+            if (tracker.velocity.angularValid)
+            {
+                tracker.velocity.angular = toEigen(velocity.angularVelocity);
+            }
+        }
+        else
+        {
+            yCWarningThrottle(OPENXRHEADSET, 5, "[PicoMotionTracking] xrLocateMotionTrackerPICO failed for tracker %zu.", i);
+        }
+    }
+}
+
 void OpenXrInterface::printInteractionProfiles()
 {
     for (auto& topLevel : m_pimpl->top_level_paths)
@@ -2250,9 +2400,11 @@ bool OpenXrInterface::initialize(const OpenXrInterfaceSettings &settings)
     m_pimpl->use_expressions = settings.useExpressions;
     m_pimpl->use_hand_tracking = settings.useHandTracking;
 	m_pimpl->use_fb_body_tracking = settings.useFbBodyTracking;
+    m_pimpl->pico_motion_tracker_count = settings.picoMotionTrackerCount;
     m_pimpl->head_filter_type = settings.headPoseFilterType;
     m_pimpl->hands_filter_type = settings.handsPoseFilterType;
     m_pimpl->htc_trackers_filter_type = settings.trackersPoseFilterType;
+    m_pimpl->pico_motion_tracker_filter_type = settings.trackersPoseFilterType;
 
 #ifdef DEBUG_RENDERING_LOCATION
     m_pimpl->renderInPlaySpace = true;
@@ -2273,6 +2425,7 @@ bool OpenXrInterface::initialize(const OpenXrInterfaceSettings &settings)
     ok = ok && prepareHandTracking();
     ok = ok && prepareFbBodyTracking();
     ok = ok && prepareBdBodyTracking();
+    ok = ok && preparePicoMotionTracking();
     m_pimpl->initialized = ok;
 
     return ok;
@@ -2310,6 +2463,9 @@ void OpenXrInterface::draw(double drawableArea)
         }
         if (m_pimpl->use_bd_body_tracking) {
             updateBdBodyTracking();
+        }
+        if (m_pimpl->pico_motion_tracker_count > 0) {
+            updatePicoMotionTracking();
         }
         if (m_pimpl->frame_state.shouldRender) {
             render(drawableArea);
@@ -2593,6 +2749,8 @@ void OpenXrInterface::getAllPoses(std::vector<NamedPoseVelocity> &additionalPose
 		numberOfPoses += m_pimpl->fbBodyJointPoses.size();
     if (m_pimpl->use_bd_body_tracking)
         numberOfPoses += m_pimpl->bdBodyJointPoses.size();
+    if (m_pimpl->pico_motion_tracker_count > 0)
+        numberOfPoses += m_pimpl->picoMotionTrackerPoses.size();
 
     additionalPoses.resize(numberOfPoses);
     size_t poseIndex = 0;
@@ -2654,6 +2812,13 @@ void OpenXrInterface::getAllPoses(std::vector<NamedPoseVelocity> &additionalPose
         for (const auto& joint : m_pimpl->bdBodyJointPoses)
         {
             additionalPoses[poseIndex] = joint;
+            poseIndex++;
+        }
+    }
+    if (m_pimpl->pico_motion_tracker_count > 0) {
+        for (const auto& tracker : m_pimpl->picoMotionTrackerPoses)
+        {
+            additionalPoses[poseIndex] = tracker;
             poseIndex++;
         }
     }

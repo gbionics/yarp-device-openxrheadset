@@ -382,6 +382,14 @@ public:
     PFN_xrDestroyBodyTrackerBD pfn_xrDestroyBodyTrackerBD = nullptr;
     std::vector<NamedPoseVelocity> bdBodyJointPoses;
 
+    // PICO motion tracking (raw motion trackers, independent of body tracking)
+    bool pico_motion_tracking_supported = false;
+    int pico_motion_tracker_count = 0; //If greater than 0, PICO motion tracking is enabled.
+    std::vector<XrMotionTrackerIdPICO> pico_motion_tracker_ids;
+    std::vector<NamedPoseVelocity> picoMotionTrackerPoses;
+    PFN_xrRequestMotionTrackerDevicePICO pfn_xrRequestMotionTrackerDevicePICO = nullptr;
+    PFN_xrLocateMotionTrackerPICO pfn_xrLocateMotionTrackerPICO = nullptr;
+
     // state of the application
     XrSessionState state = XR_SESSION_STATE_UNKNOWN;
 
@@ -480,6 +488,7 @@ public:
     PoseFilterType head_filter_type = PoseFilterType::JUMP_FILTER;
     PoseFilterType hands_filter_type = PoseFilterType::JUMP_FILTER;
     PoseFilterType htc_trackers_filter_type = PoseFilterType::JUMP_FILTER;
+    PoseFilterType pico_motion_tracker_filter_type = PoseFilterType::JUMP_FILTER;
 };
 
 
