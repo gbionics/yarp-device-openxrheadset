@@ -341,6 +341,13 @@ bool yarp::dev::OpenXrHeadset::open(yarp::os::Searchable &cfg)
         return false;
     }
 
+    std::string bdBodyFilterTypeStr = cfg.check("bd_body_pose_filter_type", yarp::os::Value("jump")).asString();
+    if (!parsePoseFilterType(bdBodyFilterTypeStr, m_openXrInterfaceSettings.bdBodyPoseFilterType))
+    {
+        yCError(OPENXRHEADSET) << "Unrecognized bd_body_pose_filter_type:" << bdBodyFilterTypeStr;
+        return false;
+    }
+
     m_getStickAsAxis = cfg.check("stick_as_axis", yarp::os::Value(false)).asBool();
     m_rootFrame = cfg.check("tf_root_frame", yarp::os::Value("openxr_origin")).asString();
     m_rootFrameRaw = m_rootFrame + "_raw";

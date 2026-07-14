@@ -58,6 +58,7 @@ This document lists all the configuration parameters parsed by the `OpenXrHeadse
 | `head_pose_filter_type` | string | `"jump"` | Filter type for the head pose. Allowed values: `"none"`, `"jump"`. |
 | `hands_pose_filter_type` | string | `"jump"` | Filter type for hand poses. Allowed values: `"none"`, `"jump"`. |
 | `trackers_pose_filter_type` | string | `"jump"` | Filter type for tracker poses. Allowed values: `"none"`, `"jump"`. |
+| `bd_body_pose_filter_type` | string | `"jump"` | Filter type for BD (PICO) body joints. Allowed values: `"none"`, `"jump"`. |
 
 ---
 

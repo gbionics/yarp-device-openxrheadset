@@ -81,6 +81,7 @@ struct OpenXrInterfaceSettings
     PoseFilterType headPoseFilterType{ PoseFilterType::JUMP_FILTER };
     PoseFilterType handsPoseFilterType{ PoseFilterType::JUMP_FILTER };
     PoseFilterType trackersPoseFilterType{ PoseFilterType::JUMP_FILTER };
+    PoseFilterType bdBodyPoseFilterType{ PoseFilterType::JUMP_FILTER };
 };
 
 class OpenXrInterface
