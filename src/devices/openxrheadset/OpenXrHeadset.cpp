@@ -341,7 +341,7 @@ bool yarp::dev::OpenXrHeadset::open(yarp::os::Searchable &cfg)
         return false;
     }
 
-    std::string bdBodyFilterTypeStr = cfg.check("bd_body_pose_filter_type", yarp::os::Value("jump")).asString();
+    std::string bdBodyFilterTypeStr = cfg.check("bd_body_pose_filter_type", yarp::os::Value("none")).asString();
     if (!parsePoseFilterType(bdBodyFilterTypeStr, m_openXrInterfaceSettings.bdBodyPoseFilterType))
     {
         yCError(OPENXRHEADSET) << "Unrecognized bd_body_pose_filter_type:" << bdBodyFilterTypeStr;
