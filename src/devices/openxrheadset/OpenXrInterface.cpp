@@ -18,8 +18,7 @@ OpenXrInterface::NamedPoseVelocity retargetPoseViaHeadOffset(
     const OpenXrInterface::Pose& offset,
     const OpenXrInterface::NamedPoseVelocity& source,
     const std::string& outputName,
-    PoseFilterType filterType,
-    bool ignoreSourceVelocityValidity)
+    PoseFilterType filterType)
 {
     OpenXrInterface::NamedPoseVelocity result;
     result.name = outputName;
@@ -27,21 +26,12 @@ OpenXrInterface::NamedPoseVelocity retargetPoseViaHeadOffset(
     result.filterType = filterType;
     result.pose = offset * source.pose;
 
-    result.velocity.linear  = offset.rotation * source.velocity.linear;
-    result.velocity.angular = offset.rotation * source.velocity.angular;
-
-    result.velocity.linearValid  = offset.rotationValid;
-    result.velocity.angularValid = offset.rotationValid;
-    
-    if(!ignoreSourceVelocityValidity)
-    {
-        result.velocity.linearValid  = result.velocity.linearValid  && source.velocity.linearValid;
-        result.velocity.angularValid = result.velocity.angularValid && source.velocity.angularValid;
-    } else {
-        result.velocity.linear.setZero();
-        result.velocity.angular.setZero();
-    }
-    
+    result.velocity.linearValid  = source.velocity.linearValid  && offset.rotationValid;
+    result.velocity.angularValid = source.velocity.angularValid && offset.rotationValid;
+    if (result.velocity.linearValid)
+        result.velocity.linear  = offset.rotation * source.velocity.linear;
+    if (result.velocity.angularValid)
+        result.velocity.angular = offset.rotation * source.velocity.angular;
 
     return result;
 }
@@ -1884,12 +1874,12 @@ void OpenXrInterface::updateBdBodyTracking()
                 for (const auto& finger : m_pimpl->leftHandJointPoses)
                 {
                     m_pimpl->bdBodyJointPoses[bdAlignedIndex++] =
-                        retargetPoseViaHeadOffset(offset, finger, openxrToBDBodyName(finger.name), m_pimpl->bd_body_filter_type, true);
+                        retargetPoseViaHeadOffset(offset, finger, openxrToBDBodyName(finger.name), m_pimpl->bd_body_filter_type);
                 }
                 for (const auto& finger : m_pimpl->rightHandJointPoses)
                 {
                     m_pimpl->bdBodyJointPoses[bdAlignedIndex++] =
-                        retargetPoseViaHeadOffset(offset, finger, openxrToBDBodyName(finger.name), m_pimpl->bd_body_filter_type, true);
+                        retargetPoseViaHeadOffset(offset, finger, openxrToBDBodyName(finger.name), m_pimpl->bd_body_filter_type);
                 }
             }
         }
