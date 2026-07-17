@@ -17,12 +17,13 @@ namespace {
 OpenXrInterface::NamedPoseVelocity retargetPoseViaHeadOffset(
     const OpenXrInterface::Pose& offset,
     const OpenXrInterface::NamedPoseVelocity& source,
-    const std::string& outputName)
+    const std::string& outputName,
+    PoseFilterType filterType)
 {
     OpenXrInterface::NamedPoseVelocity result;
     result.name = outputName;
     result.parentFrame = source.parentFrame;
-    result.filterType = PoseFilterType::NONE;
+    result.filterType = filterType;
     result.pose = offset * source.pose;
 
     result.velocity.linearValid  = source.velocity.linearValid  && offset.rotationValid;
@@ -1306,10 +1307,16 @@ bool OpenXrInterface::prepareBdBodyTracking()
     for (size_t i = 0; i < XR_BODY_JOINT_COUNT_BD; ++i)
     {
         auto& joint = m_pimpl->bdBodyJointPoses[i];
-        joint.filterType = PoseFilterType::NONE;
+        joint.filterType = m_pimpl->bd_body_filter_type;
         joint.parentFrame = "";
         std::string joint_name = m_pimpl->getBDBodyJointName(static_cast<XrBodyJointBD>(i));
         joint.name = "bd_body_" + joint_name;
+        // xrLocateBodyJointsBD does not provide velocities. Assume a zero and valid velocity so
+        // that the jump filter falls back to a zero-velocity (i.e. previous pose) prediction.
+        joint.velocity.linear.setZero();
+        joint.velocity.angular.setZero();
+        joint.velocity.linearValid = true;
+        joint.velocity.angularValid = true;
     }
 
     if (m_pimpl->use_hand_tracking)
@@ -1318,14 +1325,14 @@ bool OpenXrInterface::prepareBdBodyTracking()
         for (const auto& finger : m_pimpl->leftHandJointPoses)
         {
             auto& joint = m_pimpl->bdBodyJointPoses[bdAlignedIndex++];
-            joint.filterType = PoseFilterType::NONE;
+            joint.filterType = m_pimpl->bd_body_filter_type;
             joint.parentFrame = "";
             joint.name = openxrToBDBodyName(finger.name);
         }
         for (const auto& finger : m_pimpl->rightHandJointPoses)
         {
             auto& joint = m_pimpl->bdBodyJointPoses[bdAlignedIndex++];
-            joint.filterType = PoseFilterType::NONE;
+            joint.filterType = m_pimpl->bd_body_filter_type;
             joint.parentFrame = "";
             joint.name = openxrToBDBodyName(finger.name);
         }
@@ -1867,12 +1874,12 @@ void OpenXrInterface::updateBdBodyTracking()
                 for (const auto& finger : m_pimpl->leftHandJointPoses)
                 {
                     m_pimpl->bdBodyJointPoses[bdAlignedIndex++] =
-                        retargetPoseViaHeadOffset(offset, finger, openxrToBDBodyName(finger.name));
+                        retargetPoseViaHeadOffset(offset, finger, openxrToBDBodyName(finger.name), m_pimpl->bd_body_filter_type);
                 }
                 for (const auto& finger : m_pimpl->rightHandJointPoses)
                 {
                     m_pimpl->bdBodyJointPoses[bdAlignedIndex++] =
-                        retargetPoseViaHeadOffset(offset, finger, openxrToBDBodyName(finger.name));
+                        retargetPoseViaHeadOffset(offset, finger, openxrToBDBodyName(finger.name), m_pimpl->bd_body_filter_type);
                 }
             }
         }
@@ -2253,6 +2260,7 @@ bool OpenXrInterface::initialize(const OpenXrInterfaceSettings &settings)
     m_pimpl->head_filter_type = settings.headPoseFilterType;
     m_pimpl->hands_filter_type = settings.handsPoseFilterType;
     m_pimpl->htc_trackers_filter_type = settings.trackersPoseFilterType;
+    m_pimpl->bd_body_filter_type = settings.bdBodyPoseFilterType;
 
 #ifdef DEBUG_RENDERING_LOCATION
     m_pimpl->renderInPlaySpace = true;

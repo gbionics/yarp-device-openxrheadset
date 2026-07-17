@@ -480,6 +480,7 @@ public:
     PoseFilterType head_filter_type = PoseFilterType::JUMP_FILTER;
     PoseFilterType hands_filter_type = PoseFilterType::JUMP_FILTER;
     PoseFilterType htc_trackers_filter_type = PoseFilterType::JUMP_FILTER;
+    PoseFilterType bd_body_filter_type = PoseFilterType::NONE;
 };
 
 
